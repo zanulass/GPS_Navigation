@@ -13,7 +13,7 @@
                                   Lou  Estey
                                     UNAVCO
                                  Boulder, Co.
-                                 
+
                           IGS/RTCM RINEX Working Group
 
 Contents:
@@ -287,32 +287,32 @@ Minor edits to the Version 2.11 release:
 - Changed Table of Contents, Appendix reference to 2.11 from 2.10
 - Updated Section 4 to reflect new links to Hatanaka compression information.
 - Changed Section 6.7 Satelite Health (Version 2.10 to Version 2.11)
-- Changed Section 9. 
-  From: RINEX Version 2.10 defines the necessary extensions to handle 
+- Changed Section 9.
+  From: RINEX Version 2.10 defines the necessary extensions to handle
          such data in RINEX files for data exchange and postprocessing purposes.
   To :	The necessary extensions to handle data exchange and post-processing
         were originally defined in RINEX Version 2.10 and apply in 2.11 as well."
-- Changed the Format label for GPS Navigation File in Table A3 
-  from 2.10 to 2.11 
-- Changed the Format label for Meteo Data in Table A5 
+- Changed the Format label for GPS Navigation File in Table A3
   from 2.10 to 2.11
-- Changed the Format label for the GPS Observation File - Example in Table A7 
+- Changed the Format label for Meteo Data in Table A5
   from 2.10 to 2.11
-- Changed the Format label for the GPS Navigation File - Example in Table A8 
+- Changed the Format label for the GPS Observation File - Example in Table A7
   from 2.10 to 2.11
-- Changed the COMMENT for the GPS Navigation File - Example in Table A8 
+- Changed the Format label for the GPS Navigation File - Example in Table A8
   from 2.10 to 2.11
-- Changed the Format label for the Meteo Data File - Example in Table A9 
+- Changed the COMMENT for the GPS Navigation File - Example in Table A8
   from 2.10 to 2.11
-- Changed the Format label for GLONASS Navigation File in Table A10 
+- Changed the Format label for the Meteo Data File - Example in Table A9
   from 2.10 to 2.11
-- Changed the COMMENT for the GLONASS Navigation File - Example in Table A12 
+- Changed the Format label for GLONASS Navigation File in Table A10
+  from 2.10 to 2.11
+- Changed the COMMENT for the GLONASS Navigation File - Example in Table A12
   from 2.10 to 2.11
 - Changed the Format label for the GLONASS Observation File - Example in Table A13
   from 2.10 to 2.11
-- Changed the Format label for the Mixed GPS/GLONASS Observation File - 
+- Changed the Format label for the Mixed GPS/GLONASS Observation File -
   Example in Table A14 from 2.10 to 2.11
-- Changed the Format label for the Mixed GPS/GEO Observation File - 
+- Changed the Format label for the Mixed GPS/GEO Observation File -
   Example in Table A17 from 2.10 to 2.11
 
 
