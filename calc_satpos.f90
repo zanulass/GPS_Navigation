@@ -1,13 +1,13 @@
 module calc_satpos
   use mod_variable
-  use calendar
   implicit none
 contains
-  real(8) A, n0, tk, n, Mk, E0, FE, dFdE, E1, Ek, sinvk, cosvk, vk, PHI_k, &
-    delta_uk, delta_rk, delta_ik, uk, rk, ik, xk_prime, yk_prime, zk
-  integer i
-
   subroutine ephemeris_determination()
+    real(8) A, n0, tk, n, Mk, E0, FE, dFdE, E1, Ek, sinvk, cosvk, vk, PHI_k, &
+      delta_uk, delta_rk, delta_ik, uk, rk, ik, xk_prime, yk_prime, zk
+    integer i
+
+    
     A = sqrt_A**2 ! Semi-major axis
     n0 = sqrt(mu / A**3) ! Computed mean motion [rad/sec]
 
