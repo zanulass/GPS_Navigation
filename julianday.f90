@@ -24,6 +24,7 @@ contains
     real(8) tsv
     real(8) delta_tsv ! SV PRN code pahse time offset [second]
 
+    delta_tsv = af0 + af1
 
 
   end subroutine GPS_time
