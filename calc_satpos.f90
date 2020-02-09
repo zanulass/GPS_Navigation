@@ -3,11 +3,11 @@ module calc_satpos
   implicit none
 contains
   subroutine ephemeris_determination()
-    real(8) A, n0, tk, n, Mk, E0, FE, dFdE, E1, Ek, sinvk, cosvk, vk, PHI_k, &
-      delta_uk, delta_rk, delta_ik, uk, rk, ik, xk_prime, yk_prime, zk
+    real(8) A, n0, tk, t, n, Mk, E0, FE, dFdE, E1, Ek, sinvk, cosvk, vk, &
+      PHI_k, delta_uk, delta_rk, delta_ik, uk, rk, ik, xk_prime, yk_prime, &
+      OMEGA_k, xk, yk, zk
     integer i
 
-    
     A = sqrt_A**2 ! Semi-major axis
     n0 = sqrt(mu / A**3) ! Computed mean motion [rad/sec]
 
@@ -16,6 +16,7 @@ contains
       tk = tk - 604800
     else if (tk < -302400) then
       tk = tk + 604800
+    end if
 
     n = n0 + Delta_n ! Corrected mean motion
     Mk = M0 + n * tk ! Mean Anomaly
