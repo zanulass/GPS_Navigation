@@ -40,7 +40,25 @@ contains
     ! Inclination Correction
     delta_ik = Cis * sin(2 * PHI_k) + Cic * cos(2 * PHI_k)
 
+    uk = PHI_k + delta_uk ! Corrected Argument of Latitude
+    rk = A * (1.0 - e * cos(Ek)) + delta_rk ! Corrected Radius
+    ik = i0 + delta_ik + IDOT * tk ! Corrected Inclination
 
+    ! Positions in orbital plane
+    xk_prime = rk * cos(uk)
+    yk_prime = rk * sin(uk)
+
+    ! Corrected longitude of ascending node
+    OMEGA_k = LOMEGA0 + (OMEGA_DOT - OMEGAe_DOT) * tk - OMEGAe_DOT * TOE
+
+    ! Earth-fixed coordinates
+    xk = xk_prime * cos(OMEGA_k) - yk_prime * cos(ik) * sin(OMEGA_k)
+    yk = xk_prime * sin(OMEGA_k) + yk_prime * cos(ik) * cos(OMEGA_k)
+    zk = yk_prime * sin(ik)
+
+    write(6, *) "x =", xk
+    write(6, *) "y =", yk
+    write(6, *) "z =", zk
 
   end subroutine ephemeris_determination
 end module calc_satpos
