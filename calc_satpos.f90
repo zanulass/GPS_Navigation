@@ -2,7 +2,7 @@ module calc_satpos
   use mod_variable
   implicit none
 contains
-  subroutine ephemeris_determination()
+  subroutine ephemeris_determination(t)
     real(8) A, n0, tk, t, n, Mk, E0, FE, dFdE, E1, Ek, sinvk, cosvk, vk, &
       PHI_k, delta_uk, delta_rk, delta_ik, uk, rk, ik, xk_prime, yk_prime, &
       OMEGA_k, xk, yk, zk
