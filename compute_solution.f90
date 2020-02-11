@@ -4,11 +4,11 @@ module compute_solution
 contains
   subroutine least_squares(G, dr, dx, n, m)
   ! ------------------------------------------------------------
-  !   G[][];   デザイン行列(n×m)
-  !   dr[];    方程式の右辺(m次)
-  !   dx[];    方程式の解で上書きされる(m次)
-  !   n;       方程式の数
-  !   m;       未知数の数
+  !   G(n, m) デザイン行列(n×m)
+  !   dr(m)    方程式の右辺(range)
+  !   dx(m)    方程式の解で上書きされる(receiver pos)
+  !   n       方程式の数
+  !   m       未知数の数
   ! ------------------------------------------------------------
   integer, intent(in) ::  n, m
   real(8) G(n, m), dr(n), dx(m)
@@ -30,7 +30,7 @@ contains
     ! end do
 
     GT = transpose(G)
-    
+
     ! write(*, *) '++++++++++++++++++++++++++++++++++++++++++++'
     ! do u = 1, m
     !   write(*, '(100f12.4)') GT(u, 1:n)
