@@ -8,6 +8,10 @@ module mod_variable
   real(8), parameter :: MU = 3.986005d14 ! gravitational constant[m^3/s^2]
   real(8), parameter :: OMEGAe_DOT = 7.2921151467d-5 ! earth's rotation rate [rad/s]
 
+
+
+
+
   ! GPS NAVIGATION MESSAGE FILEのパラメータ
   ! １行目
   integer PRN, year, month, day, hour, minute

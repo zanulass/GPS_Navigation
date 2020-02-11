@@ -9,8 +9,8 @@ program main
   real(8) sats_position(5, 3), sats_range(5)
   integer i, n, loop, u
   real(8) r, x, y, z
-  real(8) G(4, 4), dr(4), dx(4)
-  real(8) sol(4)
+  real(8) G(5, 3), dr(5), dx(5)
+  real(8) sol(3)
 
   sat1_pos = (/ -13897607.6294,-10930188.6233,19676689.6804 /)
   sat2_pos = (/ -17800899.1998,15689920.8120,11943543.3888 /)
@@ -31,40 +31,41 @@ program main
 
   ! 解を初期化
   sol(3) = 0.0
-
+  G(5, 3) = 0.0
   ! 解を求めるループ
-  do loop = 1, MAX_LOOP
-    n = SATS ! 衛星の数
-    do i = 1, n
-      x = sats_position(i, 1)
+	do loop=1, MAX_LOOP
+		n=SATS;
+		do i=1, n
+			x = sats_position(i, 1)
       y = sats_position(i, 2)
       z = sats_position(i, 3)
-      ! デザイン行列をつくる
-      r = sqrt((x - sol(1))**2 + (y - sol(2))**2 + (z - sol(3))**2)
-      G(i, 1) = (sol(1) - x) / r
-      G(i, 2) = (sol(2) - y) / r
-      G(i, 3) = (sol(3) - z) / r
 
-      write(*, *) '------------------------------------------'
-      do u = 1, 5
+			! /* デザイン行列をつくる */
+			r		=sqrt((x-sol(1))*(x-sol(1)) + (y-sol(2))*(y-sol(2)) +(z-sol(3))*(z-sol(3)))
+			G(i, 1)	= (sol(1) - x) / r
+			G(i, 2)	= (sol(2) - y) / r
+			G(i, 3)	= (sol(3) - z) / r
+
+      write(*, *) '============================================='
+      do u = 1, n
         write(*, '(100f12.4)') G(u, 1:3)
       end do
 
-      ! 疑似距離の修正量 o - c (c = r + bias(今はbiasは考慮しない))
-      dr(i) = sats_range(i) - r
-    end do
+			! /* 擬似距離の修正量 */
+			dr(i)	= sats_range(i) - r
+		end do
 
-    ! 方程式を解く
-    call least_squares(G, dr, dx, n, 3)
+		! /* 方程式を解く */
+		call least_squares(G,dr,dx,n,3);
 
-    ! 初期値に加える
-    do i = 1, 3
-      sol(i) = sol(i) + dx(i)
-    end do
+		! /* 初期値に加える */
+		do i=1, 3
+			sol(i) = sol(i) + dx(i)
+		end do
 
-    ! 途中経過を出力する
-    write(*, *) "LOOP = ", loop, "x = ", sol(1), "y = ", sol(2), "z = ", sol(3)
-  end do
+		! /* 途中経過を出力する */
+    write(*, *) "LOOP ", loop, "x = ", sol(1), "y = ", sol(2), "z = ", sol(3)
+	end do
 
 
 end program main

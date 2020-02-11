@@ -29,7 +29,7 @@ contains
     ! /* ガウスの消去法 */
   	do i=1, m
   		! /* 第i行をb[i][i]で正規化する */
-  		if (abs(b(i, i))<=1E-10) stop "Cannot inverse matrix."
+  		if (abs(b(i, i))<=1d-10) stop "Cannot inverse matrix."
       j = m + m
       do while(j >= i)
   			b(i, j) = b(i, j) / b(i, i)
@@ -49,6 +49,7 @@ contains
   		end do
   	end do
 
+
   	! /* 元の行列を逆行列で上書きする */
   	do i=1, m
   		do j=1, m
@@ -57,7 +58,7 @@ contains
   	end do
     write(*, *) '------------------------------------------'
     do i = 1, m
-      write(*, '(100f12.4)') b(i, 1:m)
+      write(*, '(100f12.4)') a(i, 1:m)
     end do
   end subroutine inverse_matrix
 end module matrix
