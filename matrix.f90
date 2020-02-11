@@ -56,10 +56,12 @@ contains
   			a(i, j) = b(i, j + m)
   		end do
   	end do
-    write(*, *) '------------------------------------------'
-    do i = 1, m
-      write(*, '(100f12.4)') a(i, 1:m)
-    end do
+
+    ! write(*, *) '------------------------------------------'
+    ! do i = 1, m
+    !   write(*, '(100f12.4)') b(i, 1:m)
+    ! end do
+
   end subroutine inverse_matrix
 end module matrix
 

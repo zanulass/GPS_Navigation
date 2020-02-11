@@ -3,7 +3,7 @@ module compute_position
   implicit none
 contains
   subroutine calc_satpos(t)
-    ! 衛星の位置は計算する
+    ! 衛星の位置を計算する
     real(8) A, n0, tk, t, n, Mk, E0, FE, dFdE, E1, Ek, sinvk, cosvk, vk, &
       PHI_k, delta_uk, delta_rk, delta_ik, uk, rk, ik, xk_prime, yk_prime, &
       OMEGA_k, xk, yk, zk
