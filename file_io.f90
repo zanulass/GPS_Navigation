@@ -23,8 +23,8 @@ contains
 
     ! ヘッダ部 ---------------------------------------
     ! 現時点では読み飛ばす
-    do i = 1, 8 ! RINEX 2.11
-    ! do i = 1, 4 ! RINEX 2.10
+    !do i = 1, 8 ! RINEX 2.11
+    do i = 1, 4 ! RINEX 2.10
       read(10, '()')
     end do
     ! -------------------------------------------------
@@ -32,21 +32,34 @@ contains
     ! データ部 ----------------------------------------
     write(6, *) "Reading RINEX Nav. . ."
     do data_num = 1, 3
-      read(10, '(I2,1X,I2.2,1X,I2,1X,I2,1X,I2,1X,I2,F5.1,3D19.12)', iostat=ios) &
+      ! エフェメリスデータ格納配列を初期化
+      ephm_data(8 * 4) = 0.0
+      ! １行ずつデータを読み込む
+      read(10, '(I2,1X,I2.2,1X,I2,1X,I2,1X,I2,1X,I2,F5.1,3D19.12)') &
         PRN, year, month, day, hour, minute, second, &
-        clock_bias, clock_drift, clock_drift_rate
-      if (ios < 0) exit
-      read(10, '(3X, 4D19.12)') IODE, Crs, Delta_n, M0
-      read(10, '(3X, 4D19.12)') Cuc, e, Cus, sqrt_A
-      read(10, '(3X, 4D19.12)') TOE, Cic, LOMEGA0, Cis
-      read(10, '(3X, 4D19.12)') i0, Crc, somega, OMEGA_DOT
-      read(10, '(3X, 4D19.12)') IDOT, Codes_on_L2_channel, GPS_Week, &
-        L2_P_data_flag
-      read(10, '(3X, 4D19.12)') accuracy, health, TGD, IODC_Issue_of_Data
-      read(10, '(3X, 4D19.12)') Transmission_time_of_message, Fit_interval, &
-        spare1, spare2
-      data()
-
+        ephm_data(EPHM_AF0), ephm_data(EPHM_AF1), ephm_data(EPHM_AF2)
+      GPS_sec = 0.0
+      call utc_to_GPStime(year, month, day, hour, minute, second)
+      ephm_data(EPHM_TOC) = GPS_sec
+      read(10, '(3X, 4D19.12)') ephm_data(EPHM_IODE), ephm_data(EPHM_Crs), ephm_data(EPHM_d_n), &
+        ephm_data(EPHM_M0)
+      read(10, '(3X, 4D19.12)') ephm_data(EPHM_Cuc), ephm_data(EPHM_e), ephm_data(EPHM_Cus), &
+        ephm_data(EPHM_sqrtA)
+      read(10, '(3X, 4D19.12)') ephm_data(EPHM_TOE), ephm_data(EPHM_Cic), ephm_data(EPHM_OMEGA0), &
+        ephm_data(EPHM_Cis)
+      read(10, '(3X, 4D19.12)') ephm_data(EPHM_i0), ephm_data(EPHM_Crc), ephm_data(EPHM_omega), &
+        ephm_data(EPHM_OMEGADOT)
+      read(10, '(3X, 4D19.12)') ephm_data(EPHM_IDOT), ephm_data(EPHM_CAonL2), &
+        ephm_data(EPHM_WEEK), ephm_data(EPHM_L2P)
+      read(10, '(3X, 4D19.12)') ephm_data(EPHM_acc), ephm_data(EPHM_health), ephm_data(EPHM_TGD), &
+        ephm_data(EPHM_IODC)
+      read(10, '(3X, 4D19.12)') ephm_data(EPHM_TOT), ephm_data(EPHM_FIT), &
+        ephm_data(EPHM_spare1), ephm_data(EPHM_spare2)
+      ! 1衛星分のエフェメリスデータを格納
+      do i = 1, 32
+        Nav_data(data_num, i) = ephm_data(i)
+      end do
+    end do
     close(10)
 
     ! write(6, '(I2,1X,I2.2,1X,I2,1X,I2,1X,I2,1X,I2, F5.1,3D19.12)') &
