@@ -1,26 +1,26 @@
 module file_io
   use mod_variable
+  use time_util
   implicit none
 contains
-  subroutine read_GPS_Nav()
+  subroutine read_nav_msg()
     ! GPS NAVIGATION MESSAGE FILE からパラメータを読み込む
 
     CHARACTER(256) :: nav_msg_file
     INTEGER        :: ios ! ファイル読み込みステータス
     integer :: year, month, day, hour, minute ! TOC計算用
     DOUBLE PRECISION :: second ! TOC計算用
-    type(ephemeris_info) :: ephem_list(MAX_EPHMS) ! 全エフェメリス格納配列
-    type(ephemeris_info) :: ephem_buf ! 1衛星分のエフェメリス
 
 
 
-    integer i, j, n, prn, line,　data_num
+
+    integer i
 
 
 
 
     ! ファイルオープン
-    nav_msg_file = "data/1222040h.20n"
+    nav_msg_file = "../data/1222040h.20n"
     open(10, file=nav_msg_file)
 
     write(*, *) 'Reading RINEX Nav...'
@@ -38,11 +38,12 @@ contains
     ios = 1 ! ファイル読み込みのiostatを初期化
 
     do i = 1, 100 ! ファイルの最終行まで読み込む
-
       ! ----------- 1行目 読み込み ----------------------------------
-      read(10, '(I2,1X,I2.2,1X,I2,1X,I2,1X,I2,1X,I2,F5.1,3D19.12)') &
+      read(10, '(I2,1X,I2.2,1X,I2,1X,I2,1X,I2,1X,I2,F5.1,3D19.12)', iostat = ios) &
         ephem_buf%PRN, year, month, day, hour, minute, second, &
         ephem_buf%AF0, ephem_buf%AF1, ephem_buf%AF2
+
+      if (ios < 0) exit ! ファイル最終行に来たら読み込み終了
 
       GPS_sec = 0.0 ! 週の始めから経過秒を初期化
       call utc_to_GPStime(year, month, day, hour, minute, second) ! TOCを計算する
@@ -65,11 +66,8 @@ contains
 
       ! 1衛星分のエフェメリスデータを配列ephem_bufに格納
       ephem_list(i) = ephem_buf
-      if (ios < 0) exit
-
-
-      end do
-      close(10)
+    end do
+    close(10)
 
     ! write(6, '(I2,1X,I2.2,1X,I2,1X,I2,1X,I2,1X,I2, F5.1,3D19.12)') &
     !   PRN, year, month, day, hour, minute, second, &
@@ -84,5 +82,5 @@ contains
     ! write(6, '(3X, 4D19.12)') Transmission_time_of_message, Fit_interval, &
     !   spare1, spare2
 
-  end subroutine read_GPS_Nav
+  end subroutine read_nav_msg
 end module file_io

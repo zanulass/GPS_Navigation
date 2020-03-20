@@ -1,4 +1,3 @@
-　! モジュールの定義
 module mod_variable
   implicit none
 
@@ -42,6 +41,8 @@ module mod_variable
     DOUBLE PRECISION  :: TOT = 0.d0, Fit = 0.d0
   end type ephemeris_info
 
+  type(ephemeris_info) :: ephem_list(MAX_EPHMS) ! 全エフェメリス格納配列
+  type(ephemeris_info) :: ephem_buf ! 1衛星分のエフェメリス
 
 
 
