@@ -6,7 +6,7 @@
 *.dSYM/
 
 # サンプルコードはいらない
-sample_code/
+ref_code/
 
 test
 
