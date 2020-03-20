@@ -1,13 +1,14 @@
 module matrix
+  use mod_variable
   implicit none
 contains
   subroutine inverse_matrix(a, m)
     ! 逆行列を計算する
     implicit none
-    integer i, j, k, u
-    integer, intent(in) :: m ! 行列の次元
-    real(8), intent(inout) :: a(m, m)
-    real(8) b(m, m)
+    INTEGER i, j, k
+    INTEGER, INTENT(IN) :: m ! 行列の次元
+    DOUBLE PRECISION, INTENT(INOUT) :: a(m, m)
+    DOUBLE PRECISION b(MAX_UNKNOWN, MAX_UNKNOWN*2)
 
     ! write(*, *) '------------------------------------------'
     ! do u = 1, m
@@ -15,47 +16,45 @@ contains
     ! end do
 
     ! /* 操作用の行列をつくる */
-  	do i=1, m
-  		do j=1, m
-  			b(i, j) =a(i, j)
-  			if (i == j) then
+    do i=1, m
+      do j=1, m
+        b(i, j) =a(i, j)
+        if (i == j) then
           b(i, j+m) =1.0
         else
           b(i, j+m)=0.0
         end if
       end do
-  	end do
+    end do
 
     ! /* ガウスの消去法 */
-  	do i=1, m
+    do i=1, m
   		! /* 第i行をb[i][i]で正規化する */
-  		if (abs(b(i, i))<=1d-10) stop "Cannot inverse matrix."
+      if (abs(b(i, i))<=1d-10) stop "Cannot inverse matrix."
       j = m + m
       do while(j >= i)
-  			b(i, j) = b(i, j) / b(i, i)
+        b(i, j) = b(i, j) / b(i, i)
         j = j - 1
-  		end do
-
+      end do
 
   		! /* 他の行の第i列を消去する */
-  		do k=1, m
+      do k=1, m
         if (k /= i) then
           j = m + m
           do while (j>=i)
-    				b(k, j) = b(k, j) - (b(k, i) * b(i, j))
+            b(k, j) = b(k, j) - (b(k, i) * b(i, j))
             j = j - 1
           end do
         end if
-  		end do
-  	end do
-
+      end do
+    end do
 
   	! /* 元の行列を逆行列で上書きする */
-  	do i=1, m
-  		do j=1, m
-  			a(i, j) = b(i, j + m)
-  		end do
-  	end do
+    do i=1, m
+      do j=1, m
+        a(i, j) = b(i, j + m)
+      end do
+    end do
 
     ! write(*, *) '------------------------------------------'
     ! do i = 1, m

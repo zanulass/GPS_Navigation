@@ -9,7 +9,7 @@ contains
       OMEGA_k, xk, yk, zk
     integer i
 
-    A = sqrt_A**2 ! Semi-major axis
+    A = sqrt(A**2) ! Semi-major axis
     n0 = sqrt(mu / A**3) ! Computed mean motion [rad/sec]
 
     tk = t - TOE ! Time from ephemeris reference epoch
