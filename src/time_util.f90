@@ -15,7 +15,7 @@ contains
 
     MJD = floor(365.25*Y) + floor(Y/400) - floor(Y/100) &
        + floor(30.59*(M-2)) + D - 678912 ! + 1721088.5
-    write(*, *) " MJD = ", MJD
+    ! write(*, *) " MJD = ", MJD
 
     MJD_now = MJD + (hh/24 + mm/1440 + ss/86400)
   end subroutine julianday
