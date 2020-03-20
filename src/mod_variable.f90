@@ -8,27 +8,6 @@ module mod_variable
   DOUBLE PRECISION, PARAMETER :: MU = 3.986005d14 ! gravitational constant[m^3/s^2]
   DOUBLE PRECISION, PARAMETER :: OMEGAe_DOT = 7.2921151467d-5 ! earth's rotation rate [rad/s]
 
-
-  ! GPS NAVIGATION MESSAGE FILEのパラメータ
-  ! １行目
-  ! integer PRN, year, month, day, hour, minute
-  ! DOUBLE PRECISION second, clock_bias, clock_drift, clock_drift_rate
-  ! ! 2行目 BROADCAST ORBIT - 1
-  ! DOUBLE PRECISION IODE, Crs, Delta_n, M0
-  ! ! 3行目 BROADCAST ORBIT - 2
-  ! DOUBLE PRECISION Cuc, e, Cus, sqrt_A
-  ! ! 4行目 BROADCAST ORBIT - 3
-  ! DOUBLE PRECISION TOE, Cic, LOMEGA0, Cis
-  ! ! 5行目 BROADCAST ORBIT - 4
-  ! DOUBLE PRECISION i0, Crc, somega, OMEGA_DOT
-  ! ! 6行目 BROADCAST ORBIT - 5
-  ! DOUBLE PRECISION IDOT, Codes_on_L2_channel, GPS_Week, L2_P_data_flag
-  ! ! 7行目 BROADCAST ORBIT - 6
-  ! DOUBLE PRECISION accuracy, health, TGD, IODC_Issue_of_Data
-  ! ! 8行目 BROADCAST ORBIT - 7
-  ! DOUBLE PRECISION Transmission_time_of_message, Fit_interval, spare1, spare2
-
-
   ! 時刻の定数
   DOUBLE PRECISION, PARAMETER :: WEEK_SEC = 7d0 * 24d0 * 60d0 * 60d0
   INTEGER, PARAMETER :: GPS_ZERO(6) =(/ 1980, 1, 6, 0, 0, 0 /)
@@ -41,6 +20,28 @@ module mod_variable
   INTEGER, PARAMETER :: MAX_SATS = 16 ! 観測衛星数の上限
   INTEGER, PARAMETER :: MAX_UNKNOWNS = 4 ! 未知数の上限
   INTEGER, PARAMETER :: MAX_PRN = 32 ! 衛星番号の上限
+  INTEGER, PARAMETER :: MAX_EPHMS = 20 ! 記録するエフェメリスの上限
+
+  type :: ephemeris_info
+  !----------- 1行目 ------------------------
+    INTEGER           :: PRN = 0
+    DOUBLE PRECISION  :: TOC = 0.d0, AF0 = 0.d0, AF1 = 0.d0, AF2 = 0.d0
+  !----------- 2行目 -------------------------
+    DOUBLE PRECISION  :: IODE = 0.d0, Crs = 0.d0, delta_n = 0.d0, M0 = 0.d0
+  !----------- 3行目 -------------------------
+    DOUBLE PRECISION  :: Cuc = 0.d0, e = 0.d0, Cus = 0.d0, sqrtA = 0.d0
+  !----------- 4行目 -------------------------
+    DOUBLE PRECISION  :: TOE = 0.d0, Cic = 0.d0, LOMEGA0 = 0.d0, Cis =0.d0
+  !----------- 5行目 -------------------------
+    DOUBLE PRECISION  :: i0 = 0.d0, Crc = 0.d0, somega = 0.d0, OMEGA_DOT =0.d0
+  !----------- 6行目 -------------------------
+    DOUBLE PRECISION  :: IDOT = 0.d0, CAonL2 = 0.d0, WEEK = 0.d0, L2P = 0.d0
+  !----------- 7行目 -------------------------
+    DOUBLE PRECISION  :: acc = 0.d0, health = 0.d0, TGD = 0.d0, IODC = 0.d0
+  !----------- 8行目 -------------------------
+    DOUBLE PRECISION  :: TOT = 0.d0, Fit = 0.d0
+  end type ephemeris_info
+
 
 
 
