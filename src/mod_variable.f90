@@ -8,7 +8,7 @@ module mod_variable
   DOUBLE PRECISION, PARAMETER :: OMEGAe_DOT = 7.2921151467d-5 ! earth's rotation rate [rad/s]
 
   ! 時刻の定数
-  DOUBLE PRECISION, PARAMETER :: WEEK_SEC = 7d0 * 24d0 * 60d0 * 60d0
+  DOUBLE PRECISION, PARAMETER :: WEEK_SEC = 7.d0 * 24.d0 * 60.d0 * 60.d0
   INTEGER, PARAMETER :: GPS_ZERO(6) =(/ 1980, 1, 6, 0, 0, 0 /)
   DOUBLE PRECISION, PARAMETER ::  MJD_GPS_ZERO = 44244.00000
   ! GPS timeのパラメータ
@@ -21,6 +21,10 @@ module mod_variable
   INTEGER, PARAMETER :: MAX_PRN = 32 ! 衛星番号の上限
   INTEGER, PARAMETER :: MAX_EPHMS = 20 ! 記録するエフェメリスの上限
 
+  ! Navigation Message File ヘッダ部
+  DOUBLE PRECISION :: ion_alpha(4)
+  DOUBLE PRECISION :: ion_beta(4)
+  INTEGER          :: leap_sec
   type :: ephemeris_info
   !----------- 1行目 ------------------------
     INTEGER           :: PRN = 0
@@ -41,7 +45,7 @@ module mod_variable
     DOUBLE PRECISION  :: TOT = 0.d0, Fit = 0.d0
   end type ephemeris_info
 
-  type(ephemeris_info) :: ephem_list(MAX_EPHMS) ! 全エフェメリス格納配列
+  type(ephemeris_info) :: ephem_list(1000) ! 全エフェメリス格納配列
   type(ephemeris_info) :: ephem_buf ! 1衛星分のエフェメリス
 
 

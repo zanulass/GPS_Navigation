@@ -8,36 +8,33 @@ contains
 
     CHARACTER(256) :: nav_msg_file
     INTEGER        :: ios ! ファイル読み込みステータス
-    integer :: year, month, day, hour, minute ! TOC計算用
+    INTEGER :: year, month, day, hour, minute ! TOC計算用
     DOUBLE PRECISION :: second ! TOC計算用
-
-
-
-
-    integer i
+    INTEGER          :: i ! ループ用カウンタ
 
 
 
 
     ! ファイルオープン
-    nav_msg_file = "../data/1222040h.20n"
+    nav_msg_file = "../data/mtka3180.05n"
     open(10, file=nav_msg_file)
 
     write(*, *) 'Reading RINEX Nav...'
 
     ! ヘッダ部 ---------------------------------------
-    ! 現時点では読み飛ばす
-    !do i = 1, 8 ! RINEX 2.11
-    do i = 1, 4 ! RINEX 2.10
-      read(10, '()')
-    end do
+    read(10, '()') ! 1行目は読み飛ばす
+    read(10, '()') ! 2行目は読み飛ばす
+    read(10, '(2X,4D12.4)') ion_alpha(1), ion_alpha(2), ion_alpha(3), ion_alpha(4)
+    read(10, '(2X,4D12.4)') ion_beta(1), ion_beta(2), ion_beta(3), ion_beta(4)
+    read(10, '()') ! DELTA-UTCは読み飛ばす
+    read(10, '(I6)') leap_sec
+    read(10, '()') ! ヘッダ最終行
     ! -------------------------------------------------
 
     ! データ部 読み込み----------------------------------------
-
     ios = 1 ! ファイル読み込みのiostatを初期化
 
-    do i = 1, 100 ! ファイルの最終行まで読み込む
+    do i = 1, 1000 ! ファイルの最終行まで読み込む
       ! ----------- 1行目 読み込み ----------------------------------
       read(10, '(I2,1X,I2.2,1X,I2,1X,I2,1X,I2,1X,I2,F5.1,3D19.12)', iostat = ios) &
         ephem_buf%PRN, year, month, day, hour, minute, second, &
@@ -64,10 +61,11 @@ contains
       ! ----------- 8行目 読み込み ----------------------------------
       read(10, '(3X, 4D19.12)', iostat=ios) ephem_buf%TOT, ephem_buf%Fit
 
-      ! 1衛星分のエフェメリスデータを配列ephem_bufに格納
-      ephem_list(i) = ephem_buf
+      ephem_list(i) = ephem_buf ! エフェメリスを配列に格納
+
     end do
     close(10)
+
 
     ! write(6, '(I2,1X,I2.2,1X,I2,1X,I2,1X,I2,1X,I2, F5.1,3D19.12)') &
     !   PRN, year, month, day, hour, minute, second, &

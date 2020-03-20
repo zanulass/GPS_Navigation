@@ -3,17 +3,26 @@ program print_list
   use file_io
   implicit none
 
+
   call read_nav_msg()
 
-  call print_ephemeris_info(ephem_list)
+
+  call print_ephemeris_info()
 
 contains
-  subroutine print_ephemeris_info(list)
-    TYPE(ephemeris_info) list(MAX_EPHMS)
+  subroutine print_ephemeris_info()
+
     INTEGER :: i
 
     write(*, *) '##### input Navigation Message #####'
-    do i = 1, size(list)
+    write(*, *) ''
+    write(*, '(3X,A9,1X,F19.12,2X,A9,1X,D19.12,2X,A9,1X,D19.12,2X,A9,1X,D19.12)') &
+      'alpha1:', ion_alpha(1), 'alpha2:', ion_alpha(2), 'alpha3:', ion_alpha(3), 'alpha4:', ion_alpha(4)
+    write(*, '(3X,A9,1X,F19.12,2X,A9,1X,D19.12,2X,A9,1X,D19.12,2X,A9,1X,D19.12)') &
+      'beta1:', ion_beta(1), 'beta2:', ion_beta(2), 'beta3:', ion_beta(3), 'beta4:', ion_beta(4)
+    write(*, '(3X,A9,I6)') 'leap_sec:', leap_sec
+
+    do i = 1, size(ephem_list)
       ephem_buf = ephem_list(i)
       if (ephem_buf%PRN == 0) exit
 
