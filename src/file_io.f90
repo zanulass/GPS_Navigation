@@ -4,22 +4,26 @@ module file_io
 contains
   subroutine read_GPS_Nav()
     ! GPS NAVIGATION MESSAGE FILE からパラメータを読み込む
-    ! エフェメリスデータの取り出し番号
-    integer, parameter :: &
-      EPHM_TOC = 1,	EPHM_AF0 = 2,	EPHM_AF1 = 3,	EPHM_AF2= 4, ! line 1
-      EPHM_IODE = 5,	EPHM_Crs = 6,	EPHM_d_n = 7,	EPHM_M0 = 8, ! line 2
-      EPHM_Cuc = 9,	EPHM_e = 10, EPHM_Cus = 11,	EPHM_sqrtA = 12, ! line 3
-      EPHM_TOE = 13, EPHM_Cic = 14,	EPHM_OMEGA0 = 15, EPHM_Cis = 16, ! line 4
-      EPHM_i0 = 17,	EPHM_Crc = 18,	EPHM_omega = 19,	EPHM_dOmega= 20, !line 5
-      EPHM_di = 21,	EPHM_CAonL2 = 22, EPHM_WEEK = 23,	EPHM_L2P = 24,	! line 6
-      EPHM_acc = 25, EPHM_health = 26, EPHM_TGD = 27,	EPHM_IODC = 28,	! line 7
-      EPHM_TOT = 29, EPHM_FIT = 30 ! line 8
 
-    real(8) data(8 * 4) ! １衛星のエフェメリスデータ
-    integer i, j, n, prn, line, ios, data_num
+    CHARACTER(256) :: nav_msg_file
+    INTEGER        :: ios ! ファイル読み込みステータス
+    integer :: year, month, day, hour, minute ! TOC計算用
+    DOUBLE PRECISION :: second ! TOC計算用
+    type(ephemeris_info) :: ephem_list(MAX_EPHMS) ! 全エフェメリス格納配列
+    type(ephemeris_info) :: ephem_buf ! 1衛星分のエフェメリス
+
+
+
+    integer i, j, n, prn, line,　data_num
+
+
+
 
     ! ファイルオープン
-    open(10, file="data/1222040h.20n")
+    nav_msg_file = "data/1222040h.20n"
+    open(10, file=nav_msg_file)
+
+    write(*, *) 'Reading RINEX Nav...'
 
     ! ヘッダ部 ---------------------------------------
     ! 現時点では読み飛ばす
@@ -29,38 +33,43 @@ contains
     end do
     ! -------------------------------------------------
 
-    ! データ部 ----------------------------------------
-    write(6, *) "Reading RINEX Nav. . ."
-    do data_num = 1, 3
-      ! エフェメリスデータ格納配列を初期化
-      ephm_data(8 * 4) = 0.0
-      ! １行ずつデータを読み込む
+    ! データ部 読み込み----------------------------------------
+
+    ios = 1 ! ファイル読み込みのiostatを初期化
+
+    do i = 1, 100 ! ファイルの最終行まで読み込む
+
+      ! ----------- 1行目 読み込み ----------------------------------
       read(10, '(I2,1X,I2.2,1X,I2,1X,I2,1X,I2,1X,I2,F5.1,3D19.12)') &
-        PRN, year, month, day, hour, minute, second, &
-        ephm_data(EPHM_AF0), ephm_data(EPHM_AF1), ephm_data(EPHM_AF2)
-      GPS_sec = 0.0
-      call utc_to_GPStime(year, month, day, hour, minute, second)
-      ephm_data(EPHM_TOC) = GPS_sec
-      read(10, '(3X, 4D19.12)') ephm_data(EPHM_IODE), ephm_data(EPHM_Crs), ephm_data(EPHM_d_n), &
-        ephm_data(EPHM_M0)
-      read(10, '(3X, 4D19.12)') ephm_data(EPHM_Cuc), ephm_data(EPHM_e), ephm_data(EPHM_Cus), &
-        ephm_data(EPHM_sqrtA)
-      read(10, '(3X, 4D19.12)') ephm_data(EPHM_TOE), ephm_data(EPHM_Cic), ephm_data(EPHM_OMEGA0), &
-        ephm_data(EPHM_Cis)
-      read(10, '(3X, 4D19.12)') ephm_data(EPHM_i0), ephm_data(EPHM_Crc), ephm_data(EPHM_omega), &
-        ephm_data(EPHM_OMEGADOT)
-      read(10, '(3X, 4D19.12)') ephm_data(EPHM_IDOT), ephm_data(EPHM_CAonL2), &
-        ephm_data(EPHM_WEEK), ephm_data(EPHM_L2P)
-      read(10, '(3X, 4D19.12)') ephm_data(EPHM_acc), ephm_data(EPHM_health), ephm_data(EPHM_TGD), &
-        ephm_data(EPHM_IODC)
-      read(10, '(3X, 4D19.12)') ephm_data(EPHM_TOT), ephm_data(EPHM_FIT), &
-        ephm_data(EPHM_spare1), ephm_data(EPHM_spare2)
-      ! 1衛星分のエフェメリスデータを格納
-      do i = 1, 32
-        Nav_data(data_num, i) = ephm_data(i)
+        ephem_buf%PRN, year, month, day, hour, minute, second, &
+        ephem_buf%AF0, ephem_buf%AF1, ephem_buf%AF2
+
+      GPS_sec = 0.0 ! 週の始めから経過秒を初期化
+      call utc_to_GPStime(year, month, day, hour, minute, second) ! TOCを計算する
+      ephem_buf%TOC = GPS_sec
+
+      ! ----------- 2行目 読み込み ----------------------------------
+      read(10, '(3X, 4D19.12)') ephem_buf%IODE, ephem_buf%Crs, ephem_buf%delta_n, ephem_buf%M0
+      ! ----------- 3行目 読み込み ----------------------------------
+      read(10, '(3X, 4D19.12)') ephem_buf%Cuc, ephem_buf%e,  ephem_buf%Cus, ephem_buf%sqrtA
+      ! ----------- 4行目 読み込み ----------------------------------
+      read(10, '(3X, 4D19.12)') ephem_buf%TOE, ephem_buf%Cic, ephem_buf%LOMEGA0, ephem_buf%Cis
+      ! ----------- 5行目 読み込み ----------------------------------
+      read(10, '(3X, 4D19.12)') ephem_buf%i0, ephem_buf%Crc, ephem_buf%somega, ephem_buf%OMEGA_DOT
+      ! ----------- 6行目 読み込み ----------------------------------
+      read(10, '(3X, 4D19.12)') ephem_buf%IDOT, ephem_buf%CAonL2, ephem_buf%WEEK, ephem_buf%L2P
+      ! ----------- 7行目 読み込み ----------------------------------
+      read(10, '(3X, 4D19.12)') ephem_buf%acc, ephem_buf%health, ephem_buf%TGD, ephem_buf%IODC
+      ! ----------- 8行目 読み込み ----------------------------------
+      read(10, '(3X, 4D19.12)', iostat=ios) ephem_buf%TOT, ephem_buf%Fit
+
+      ! 1衛星分のエフェメリスデータを配列ephem_bufに格納
+      ephem_list(i) = ephem_buf
+      if (ios < 0) exit
+
+
       end do
-    end do
-    close(10)
+      close(10)
 
     ! write(6, '(I2,1X,I2.2,1X,I2,1X,I2,1X,I2,1X,I2, F5.1,3D19.12)') &
     !   PRN, year, month, day, hour, minute, second, &
