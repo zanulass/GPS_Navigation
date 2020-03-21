@@ -15,9 +15,8 @@ contains
     DOUBLE PRECISION :: t ! (TOCの週番号 - GPSweek) + TOT [sec]
     type(wtime) :: wt
 
-    ! ファイルオープン
 
-    open(10, file=nav_msg_file)
+    open(10, file=nav_msg_file, action='read', status='old') ! Navigation Message Fileオープン
 
     write(*, *) 'Reading RINEX Nav...'
 

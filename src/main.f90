@@ -1,6 +1,8 @@
 program main
   use mod_variable
+  use navigation_message
   use satellite_position
+  use print_list
   use compute_solution
   implicit none
 
@@ -25,18 +27,18 @@ program main
 !   +------------------------------------------------------------------------------------------------------------
       INTEGER, PARAMETER      :: SATS = 5             ! 使用する衛星数
       INTEGER, PARAMETER      :: MAX_LOOP = 8         ! 解を求める際に用いる最大ループ回数
-      INTEGER, PARAMETER      :: PRN_list(SATS)       ! 使用する衛星のリスト
-      ! DOUBLE PRECISION        :: SAT1_POS(3), SAT2_POS(3), SAT3_POS(3), SAT4_POS(3), SAT5_POS(3) ! 各衛星の位置
-      DOUBLE PRECISION        :: SATS_POSITION(3, SATS), SATS_RANGE(SATS) ! 各衛生の位置とrangeの配列
+      INTEGER                 :: PRN_list(SATS)       ! 使用する衛星のリスト
+      DOUBLE PRECISION        :: SATS_RANGE(SATS)     ! 各衛星の位置とrangeの配列
       DOUBLE PRECISION        :: r                    ! range
       ! DOUBLE PRECISION        :: pos_xyz(3)           ! 衛星位置xyzの配列
       DOUBLE PRECISION        :: G(SATS, 3)           ! 観測行列
       DOUBLE PRECISION        :: dr(SATS)             ! rangeの修正量
       DOUBLE PRECISION        :: dx(SATS)             ! 解の更新量
       DOUBLE PRECISION        :: sol(3)               ! 求める方程式の解 receiver positionのx, y, z座標
-      INTEGER                 :: i, n, loop, u        ! ループ用カウンタ
+      INTEGER                 :: i, n, loop           ! ループ用カウンタ
       DOUBLE PRECISION        :: x, y, z              ! 解の確認用出力
       CHARACTER(256)          :: nav_msg_file         ! RINEX NAVIGATION MESSAGE FILEのパス
+      CHARACTER(256)          :: list_file            ! 実行結果リストのパス
       TYPE(wtime)             :: wt                   ! 時刻
       TYPE(ephemeris_info)    :: current_ephem        ! 作業用のエフェメリス情報
 !   +-----------------------------------------------------------------------------------------------------------------
@@ -57,12 +59,13 @@ program main
   ! end do
 
   ! 使用するPRN
-  PRN_list(SATS) = (/ 5,14,16,22,25 /)
+  PRN_list(:) = (/ 5,14,16,22,25 /)
   ! 観測データを配列にセット
   sats_range(:) = (/ 23634878.5219d0, 20292688.3557d0, 24032055.0372d0, 24383229.3740d0, 22170992.8178d0/)
 
   ! Navigatione Message Fileのパス
   nav_msg_file = "../data/mtka3180.05n"
+  list_file = "../tmp/list"
 
   call read_nav_msg(nav_msg_file) ! Navigation Message File読み込み
 
@@ -73,19 +76,22 @@ program main
   sol(:) = 0.d0  ! 解を初期化
   G(:, :) = 0.d0 ! 観測行列を初期化
 
+  open (20,  file=list_file, action='write', status='replace') ! 実行結果リストオープン
+  call print_nav_file_header()
   ! 解を求めるループ
   do loop=1, MAX_LOOP
-    n = SATS  ! 衛星の数をセットする
-    do i=1, n ! 衛星の数だけループする
+    ! n = SATS  ! 衛星の数をセットする
+    do i=1, size(PRN_list) ! 衛星の数だけループする
       ! xyz(1:3) = SATS_POSITION(1:3, i) ! 衛星の位置を配列xyzにセット
 
       call set_ephemeris(PRN_list(i), wt, -1, current_ephem)
       ! call calc_clock(PRN_list(i), wt)
       current_ephem%pos_xyz(:) = 0.d0 ! 衛星位置を初期化
       call calc_satpos(wt, current_ephem)
+      call print_ephemeris_info(current_ephem)
 
-      r = sqrt( sum( (xyz(1:3) - sol(1:3) ) ** 2.d0 ) ) ! 疑似距離rの計算
-      G(i,1:3) = ( sol(1:3) - xyz(1:3) ) / r ! 観測行列Gを作成
+      r = sqrt( sum( (current_ephem%pos_xyz(1:3) - sol(1:3) ) ** 2.d0 ) ) ! 疑似距離rの計算
+      G(i,1:3) = ( sol(1:3) - current_ephem%pos_xyz(1:3) ) / r ! 観測行列Gを作成
 
 
       dr(i) = SATS_RANGE(i) - r !擬似距離の修正量drを計算
@@ -100,13 +106,13 @@ program main
     ! 途中経過を出力
     write(6, '("LOOP ",I0, 5X,"x = ",f12.3,5X,"y = ",f12.3,5X,"z = ", f12.3)') &
       loop, sol(1), sol(2), sol(3)
-
-    ! ! 正しい解
-    x = -3947762.486d0
-    y = 3364401.302d0
-    z = 3699431.992d0
   end do
+  close(20) ! 実行結果リストクローズ
 
+  ! ! 正しい解
+  x = -3947762.486d0
+  y = 3364401.302d0
+  z = 3699431.992d0
   write(6, *) "*****************************************************"
   write(6, '("x = ",f12.3,5X,"y = ",f12.3,5X,"z = ",f12.3)') x, y, z
 
