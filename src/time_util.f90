@@ -21,21 +21,25 @@ contains
   end subroutine julianday
 
 
-  subroutine utc_to_GPStime(year, month, day, hour, minute, ss)
-    ! 日時からGPS system timeへの変換
-    ! GPS_week 週番号, sec_week 週の始めからの経過秒
+  subroutine date_to_wtime(year, month, day, hour, minute, ss, wt)
+    ! 日時から週番号・秒への変換
     implicit none
     INTEGER year, month, day, hour, minute
     DOUBLE PRECISION Y, M, D, hh, mm, ss, MJD_now, delta_sec
-    MJD_now = 0.0 ! 単位はday
+    type(wtime), INTENT(INOUT) :: wt
+
+    MJD_now = 0.d0 ! 単位はday
+    ! julianday計算用にdoubleに変換
     Y = dble(year)
     M = dble(month)
     D = dble(day)
     hh = dble(hour)
     mm = dble(minute)
+
     call julianday(Y, M, D, hh, mm, ss, MJD_now)
-    delta_sec = MJD_now * 86400.d0 - MJD_GPS_ZERO * 86400.d0 ! 単位は秒
-    GPS_week = int(delta_sec / WEEK_SEC)
-    GPS_sec = mod(delta_sec, WEEK_SEC)
-  end subroutine utc_to_GPStime
+
+    delta_sec = (MJD_now - MJD_GPS_ZERO) * 86400.d0 ! 単位は秒
+    wt%week = idint(delta_sec / WEEK_SEC)
+    wt%sec = dmod(delta_sec, WEEK_SEC)
+  end subroutine date_to_wtime
 end module time_util

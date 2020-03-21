@@ -1,4 +1,6 @@
 program main
+  use mod_variable
+  use satellite_position
   use compute_solution
   implicit none
 
@@ -23,37 +25,50 @@ program main
 !   +------------------------------------------------------------------------------------------------------------
       INTEGER, PARAMETER      :: SATS = 5             ! 使用する衛星数
       INTEGER, PARAMETER      :: MAX_LOOP = 8         ! 解を求める際に用いる最大ループ回数
-      DOUBLE PRECISION        :: SAT1_POS(3), SAT2_POS(3), SAT3_POS(3), SAT4_POS(3), SAT5_POS(3) ! 各衛星の位置
+      INTEGER, PARAMETER      :: PRN_list(SATS)       ! 使用する衛星のリスト
+      ! DOUBLE PRECISION        :: SAT1_POS(3), SAT2_POS(3), SAT3_POS(3), SAT4_POS(3), SAT5_POS(3) ! 各衛星の位置
       DOUBLE PRECISION        :: SATS_POSITION(3, SATS), SATS_RANGE(SATS) ! 各衛生の位置とrangeの配列
       DOUBLE PRECISION        :: r                    ! range
-      DOUBLE PRECISION        :: xyz(3)               ! 衛星位置xyzの配列
+      ! DOUBLE PRECISION        :: pos_xyz(3)           ! 衛星位置xyzの配列
       DOUBLE PRECISION        :: G(SATS, 3)           ! 観測行列
       DOUBLE PRECISION        :: dr(SATS)             ! rangeの修正量
       DOUBLE PRECISION        :: dx(SATS)             ! 解の更新量
       DOUBLE PRECISION        :: sol(3)               ! 求める方程式の解 receiver positionのx, y, z座標
       INTEGER                 :: i, n, loop, u        ! ループ用カウンタ
       DOUBLE PRECISION        :: x, y, z              ! 解の確認用出力
+      CHARACTER(256)          :: nav_msg_file         ! RINEX NAVIGATION MESSAGE FILEのパス
+      TYPE(wtime)             :: wt                   ! 時刻
+      TYPE(ephemeris_info)    :: current_ephem        ! 作業用のエフェメリス情報
 !   +-----------------------------------------------------------------------------------------------------------------
 
 
-  SAT1_POS(:) = (/ -13897607.6294d0, -10930188.6233d0, 19676689.6804d0 /)
-  SAT2_POS(:) = (/ -17800899.1998d0, 15689920.8120d0, 11943543.3888d0 /)
-  SAT3_POS(:) = (/ -1510958.2282d0, 26280096.7818d0, -3117646.1949d0 /)
-  SAT4_POS(:) = (/ -12210758.3517d0, 20413597.0201d0, -11649499.5474d0 /)
-  SAT5_POS(:) = (/ -170032.6981d0, 17261822.6784d0, 20555984.4061d0 /)
+  ! SAT1_POS(:) = (/ -13897607.6294d0, -10930188.6233d0, 19676689.6804d0 /)
+  ! SAT2_POS(:) = (/ -17800899.1998d0, 15689920.8120d0, 11943543.3888d0 /)
+  ! SAT3_POS(:) = (/ -1510958.2282d0, 26280096.7818d0, -3117646.1949d0 /)
+  ! SAT4_POS(:) = (/ -12210758.3517d0, 20413597.0201d0, -11649499.5474d0 /)
+  ! SAT5_POS(:) = (/ -170032.6981d0, 17261822.6784d0, 20555984.4061d0 /)
+  ! SATS_POSITION(:, :) = 0.0d0 ! 衛星の位置を初期化
+  ! do i = 1, 3 ! 各衛星の位置を配列にセット
+  !   SATS_POSITION(i, 1) = SAT1_POS(i)
+  !   SATS_POSITION(i, 2) = SAT2_POS(i)
+  !   SATS_POSITION(i, 3) = SAT3_POS(i)
+  !   SATS_POSITION(i, 4) = SAT4_POS(i)
+  !   SATS_POSITION(i, 5) = SAT5_POS(i)
+  ! end do
 
-
-  SATS_POSITION(:, :) = 0.0d0 ! 衛星の位置を初期化
-  do i = 1, 3 ! 各衛星の位置を配列にセット
-    SATS_POSITION(i, 1) = SAT1_POS(i)
-    SATS_POSITION(i, 2) = SAT2_POS(i)
-    SATS_POSITION(i, 3) = SAT3_POS(i)
-    SATS_POSITION(i, 4) = SAT4_POS(i)
-    SATS_POSITION(i, 5) = SAT5_POS(i)
-  end do
-
+  ! 使用するPRN
+  PRN_list(SATS) = (/ 5,14,16,22,25 /)
   ! 観測データを配列にセット
   sats_range(:) = (/ 23634878.5219d0, 20292688.3557d0, 24032055.0372d0, 24383229.3740d0, 22170992.8178d0/)
+
+  ! Navigatione Message Fileのパス
+  nav_msg_file = "../data/mtka3180.05n"
+
+  call read_nav_msg(nav_msg_file) ! Navigation Message File読み込み
+
+  ! 時刻を指定
+  wt%week = 1349     ! 05/11/13〜19の週
+  wt%sec = 86400.d0  ! 月曜日の00:00:00
 
   sol(:) = 0.d0  ! 解を初期化
   G(:, :) = 0.d0 ! 観測行列を初期化
@@ -62,15 +77,16 @@ program main
   do loop=1, MAX_LOOP
     n = SATS  ! 衛星の数をセットする
     do i=1, n ! 衛星の数だけループする
-      xyz(1:3) = SATS_POSITION(1:3, i) ! 衛星の位置を配列xyzにセット
+      ! xyz(1:3) = SATS_POSITION(1:3, i) ! 衛星の位置を配列xyzにセット
+
+      call set_ephemeris(PRN_list(i), wt, -1, current_ephem)
+      ! call calc_clock(PRN_list(i), wt)
+      current_ephem%pos_xyz(:) = 0.d0 ! 衛星位置を初期化
+      call calc_satpos(wt, current_ephem)
+
       r = sqrt( sum( (xyz(1:3) - sol(1:3) ) ** 2.d0 ) ) ! 疑似距離rの計算
       G(i,1:3) = ( sol(1:3) - xyz(1:3) ) / r ! 観測行列Gを作成
 
-      ! 観測行列のデバッグライト
-      ! write(*, *) '========================================='
-      ! do u = 1, n
-      !   write(*, *) G(u, 1:3)
-      ! end do
 
       dr(i) = SATS_RANGE(i) - r !擬似距離の修正量drを計算
     end do
