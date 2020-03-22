@@ -68,11 +68,8 @@ program main
     22169926.127d0  & ! PRN 25
    /)
 
-  ! Navigatione Message Fileのパス
-  nav_msg_file = "../data/mtka3180.05n"
-  list_file = "../tmp/list"
-
-
+  nav_msg_file = "../data/mtka3180.05n" ! Navigatione Message Fileのパス
+  list_file = "../tmp/list" ! 実行結果リストファイルのパス
 
   ! 時刻を指定
   wt%week = 1349     ! 05/11/13〜19の週
