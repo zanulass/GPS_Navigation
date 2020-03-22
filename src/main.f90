@@ -43,7 +43,7 @@ program main
       DOUBLE PRECISION        :: r                           ! range
       DOUBLE PRECISION        :: G(SATS, MAX_UNKNOWNS)       ! 観測行列(観測衛星数の上限 ×　未知数の上限)
       DOUBLE PRECISION        :: dr(SATS)                    ! rangeの修正量
-      DOUBLE PRECISION        :: dx(SATS)                    ! 解の更新量
+      DOUBLE PRECISION        :: dx(MAX_UNKNOWNS)                    ! 解の更新量
       DOUBLE PRECISION        :: sol(MAX_UNKNOWNS)           ! 方程式の解:受信機位置x,y,z座標, 受信機クロック誤差 s
       INTEGER                 :: i, n, loop, u               ! ループ用カウンタ
       CHARACTER(256)          :: nav_msg_file                ! RINEX NAVIGATION MESSAGE FILEのパス
@@ -129,7 +129,7 @@ program main
   y = 3364338.022d0
   z = 3699406.626d0
   s = -5.3233d-008
-  write(6, *) "*****************************************************"
+  write(6, *) "******************** 正しい計算結果 ******************************"
   write(6, '("x = ",f12.3,5X,"y = ",f12.3,5X,"z = ",f12.3, 5X,"s = ",d12.4)') x, y, z, s
 
 end program main
