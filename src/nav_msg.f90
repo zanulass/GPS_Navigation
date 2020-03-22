@@ -73,7 +73,7 @@ contains
       t = (info_week - ephem_data%WEEK) * WEEK_SEC
       ephem_data%TOC = ephem_data%TOC + t
 
-      ! PRNが同じ衛星がまだひとつもないとき、エフェメリス格納配列に入れて、カウンタを1増やす
+      ! PRNが同じ衛星がまだひとつもないとき、エフェメリス格納配列に入れて、カウンタを1にする
       if (ephem_count(ephem_data%PRN) == 0) then
         ephem_buf(ephem_data%PRN, 1) = ephem_data ! i番目にデータを挿入
         ephem_count(ephem_data%PRN) = 1
@@ -81,7 +81,6 @@ contains
       end if
 
       ! 同じPRNのエフェメリスは送信時刻の早いものを残す-------------------------
-      ! ephem_bufにインデックス0が無いため、すでにephem_bufに1つ以上データが入っている場合に分岐に入る
       do  i = 1, ephem_count(ephem_data%PRN)
         if (ephem_buf(ephem_data%PRN, i)%WEEK /= wt%week) cycle ! 週番号が異なるものは飛ばす
         if (ephem_buf(ephem_data%PRN, i)%WEEK == ephem_data%IODC) then !IODCが一致
@@ -103,7 +102,6 @@ contains
       do i = 1, ephem_count(ephem_data%PRN)
         t = (ephem_buf(ephem_data%PRN, i)%WEEK - info_week) * WEEK_SEC &
             + ephem_buf(ephem_data%PRN, i)%TOT
-        ! 送信時刻がi番目のエフェメリスより早いとき、i番目に現在のエフェメリスを挿入する
         if (ephem_data%TOT < t) exit
       end do
       do j = ephem_count(ephem_data%PRN), i + 1, -1
