@@ -6,14 +6,17 @@ contains
   subroutine read_nav_msg(nav_msg_file)
     ! GPS NAVIGATION MESSAGE FILE からパラメータを読み込む
 
+    ! 引数詳細
     CHARACTER(256), INTENT(IN)   :: nav_msg_file         ! RINEX NAVIGATION MESSAGE FILEのパス
 
+    ! 使用局所領域
     INTEGER        :: ios ! ファイル読み込みステータス
     INTEGER :: year, month, day, hour, minute ! TOC計算用
     DOUBLE PRECISION :: second ! TOC計算用
     INTEGER          :: i, j ! ループ用カウンタ
     DOUBLE PRECISION :: t ! (TOCの週番号 - GPSweek) + TOT [sec]
     type(wtime) :: wt
+    INTEGER   :: info_week
 
 
     open(10, file=nav_msg_file, action='read', status='old') ! Navigation Message Fileオープン
@@ -46,6 +49,9 @@ contains
       wt%sec = 0.d0 ! 経過秒を初期化
       call date_to_wtime(year, month, day, hour, minute, second, wt) ! TOCを計算する
       ephem_data%TOC = wt%sec
+      info_week = wt%week
+
+
       ! ----------- 2行目 読み込み ----------------------------------
       read(10, '(3X, 4D19.12)') ephem_data%IODE, ephem_data%Crs, ephem_data%delta_n, ephem_data%M0
       ! ----------- 3行目 読み込み ----------------------------------
@@ -61,8 +67,10 @@ contains
       ! ----------- 8行目 読み込み ----------------------------------
       read(10, '(3X, 4D19.12)', iostat=ios) ephem_data%TOT, ephem_data%Fit
 
+      if (ephem_data%PRN < 1) cycle
+
       ! 週番号を揃える
-      t = (wt%week - ephem_data%WEEK) * WEEK_SEC
+      t = (info_week - ephem_data%WEEK) * WEEK_SEC
       ephem_data%TOC = ephem_data%TOC + t
 
       ! PRNが同じ衛星がまだひとつもないとき、エフェメリス格納配列に入れて、カウンタを1増やす
@@ -74,35 +82,35 @@ contains
 
       ! 同じPRNのエフェメリスは送信時刻の早いものを残す-------------------------
       ! ephem_bufにインデックス0が無いため、すでにephem_bufに1つ以上データが入っている場合に分岐に入る
-      if (ephem_count(ephem_data%PRN) > 0) then
-        do  i = 1, ephem_count(ephem_data%PRN)
-          if (ephem_buf(ephem_data%PRN, i)%WEEK /= wt%week) cycle ! 週番号が同じ
-          if (ephem_buf(ephem_data%PRN, i)%WEEK /= ephem_data%IODC) cycle !IODCが同じ
+      do  i = 1, ephem_count(ephem_data%PRN)
+        if (ephem_buf(ephem_data%PRN, i)%WEEK /= wt%week) cycle ! 週番号が異なるものは飛ばす
+        if (ephem_buf(ephem_data%PRN, i)%WEEK == ephem_data%IODC) then !IODCが一致
           if (ephem_data%TOT < ephem_buf(ephem_data%PRN, i)%TOT) then ! 送信時刻が早いものを残す
             ephem_buf(ephem_data%PRN, i) = ephem_data
           end if
-        end do
-      end if
+          ephem_data%PRN = 0
+          exit
+        end if
+      end do
       ! ------------------------------------------------------------------
 
+      if (ephem_data%PRN < 1) cycle
 
       if (ephem_count(ephem_data%PRN) >= MAX_EPHMS) & ! 同じPRNの衛星が多すぎるとエラー
           stop 'too long NAV file.'
 
       ! 配列に格納する(送信時刻の昇順) ----------------------------------------
-      do i = 1, ephem_count(ephem_data%PRN) + 1
-          t = (ephem_buf(ephem_data%PRN, i)%WEEK - ephem_data%WEEK) * WEEK_SEC &
-              + ephem_buf(ephem_data%PRN, i)%TOT
-          ! 送信時刻がi番目のエフェメリスより早いとき、i番目に現在のエフェメリスを挿入する
-          if (ephem_data%TOT < t) then
-            do j = ephem_count(ephem_data%PRN) + 1, i, -1
-              ! 現在のPRNの衛星のエフェメリスを送信時刻の昇順で上にずらし、i番目を開ける
-              ephem_buf(ephem_data%PRN, j + 1) = ephem_buf(ephem_data%PRN, j)
-            end do
-            ephem_buf(ephem_data%PRN, i) = ephem_data ! i番目にデータを挿入
-            exit
-          end if
+      do i = 1, ephem_count(ephem_data%PRN)
+        t = (ephem_buf(ephem_data%PRN, i)%WEEK - info_week) * WEEK_SEC &
+            + ephem_buf(ephem_data%PRN, i)%TOT
+        ! 送信時刻がi番目のエフェメリスより早いとき、i番目に現在のエフェメリスを挿入する
+        if (ephem_data%TOT < t) exit
       end do
+      do j = ephem_count(ephem_data%PRN), i + 1, -1
+        ! 現在のPRNの衛星のエフェメリスを送信時刻の昇順で上にずらし、i番目を開ける
+        ephem_buf(ephem_data%PRN, j) = ephem_buf(ephem_data%PRN, j - 1)
+      end do
+      ephem_buf(ephem_data%PRN, i) = ephem_data ! i番目にデータを挿入
       ephem_count(ephem_data%PRN) = ephem_count(ephem_data%PRN) + 1 ! カウントを1増やす
       ! ------------------------------------------------------------------
 
@@ -110,6 +118,8 @@ contains
     close(10)
 
   end subroutine read_nav_msg
+
+! ============================================================================================
 
   subroutine set_ephemeris(PRN, wt, iode, current_ephem)
     ! 使用するエフェメリスをセットする
@@ -121,15 +131,13 @@ contains
 
     ! 使用局所領域
     DOUBLE PRECISION :: t0, t
-    INTEGER :: i, j ! カウンタ
+    INTEGER :: i! カウンタ
 
-    j = 0
     ! 新しいエフェメリスから探す
     do i = ephem_count(PRN), 1, -1
-      j = i
-      ! エフェメリスの週番号と指定時刻の週番号の差 [sec]
-      t0 = ( ephem_buf(PRN, i)%WEEK - wt%week ) * WEEK_SEC
-      t = ephem_buf(PRN, i)%TOC + t0 ! tをクロックに足す
+      ! j = i
+      t0 = ( ephem_buf(PRN, i)%WEEK - wt%week ) * WEEK_SEC ! エフェメリスの週番号と指定時刻の週番号の差 [sec]
+      t = ephem_buf(PRN, i)%TOC + t0 ! t0をクロックに足す
       if (wt%sec < t - EPHEMERIS_EXPIRE * 3600.d0 - 0.1d0 .or. & ! 有効期限より小さい
           wt%sec > t - EPHEMERIS_EXPIRE * 3600.d0 + 0.1d0) then  ! 有効期限より大きい
         cycle ! 有効期限内でなければ飛ばす
@@ -137,22 +145,17 @@ contains
 
       ! IODEが一致すれば採用
       if (iode >= 0) then
-        if (ephem_buf(PRN, i)%IODE == iode) then
-          j = i
-          exit
-        end if
+        if (ephem_buf(PRN, i)%IODE == iode) exit
+        cycle
       end if
 
       ! 受信時刻が指定時刻よりも前なら採用
       t = ephem_buf(PRN, i)%TOT + t0 ! tを送信時刻(TOT)に足す
-      if (t < wt%sec + 0.1d0 ) then
-        j = i
-        exit
-      end if
+      if (t < wt%sec + 0.1d0 ) exit
 
     end do
 
-    current_ephem = ephem_buf(PRN, j)
+    current_ephem = ephem_buf(PRN, i)
   end subroutine set_ephemeris
 
 

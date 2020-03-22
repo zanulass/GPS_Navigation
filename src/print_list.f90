@@ -52,7 +52,7 @@ contains
       'TOT:', current_ephem%TOT, 'Fit:', current_ephem%Fit
     write(20, *) ''
     write(20, '(3X,A29,2X,A9,1X,D19.12,2X,A9,1X,D19.12,2X,A9,1X,D19.12)') &
-      'Satellite Positon:', 'x:', current_ephem%pos_xyz(1), 'y:', current_ephem%pos_xyz(2), 'z:', current_ephem%pos_xyz(3)
+      'Satellite Positon', 'x:', current_ephem%pos_xyz(1), 'y:', current_ephem%pos_xyz(2), 'z:', current_ephem%pos_xyz(3)
 
   end subroutine print_ephemeris_info
 end module print_list

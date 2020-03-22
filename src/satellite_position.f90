@@ -38,7 +38,7 @@ contains
     e = current_ephem%e ! eccentricity
     n = sqrt(MU / A**3) ! Computed mean motion [rad/sec]
     n = n + current_ephem%delta_n ! Corrected mean motion
-    Mk = current_ephem%M0 + n * tk0 ! Mean Anomaly
+    Mk = current_ephem%M0 + n * tk ! Mean Anomaly
 
     ! Solve Kepler equation by Newton-Raphson Method
     E0 = Mk
@@ -51,16 +51,16 @@ contains
     end do
     Ek = E0 ! 最終的に得られた解(Eccentric Anomaly)
 
-    vk = atan2( sqrt( 1.d0 - e ** 2.d0 ) * sin(Ek), cos(Ek) - 2.d0 ) ! True Anomaly
+    vk = atan2( sqrt( 1.d0 - e**2.d0 ) * sin(Ek), cos(Ek) - e ) ! True Anomaly
     PHI_k = vk + current_ephem%somega ! Argument of Latitude
 
     ! Second Harmonic Perturbations
     delta_uk = current_ephem%Cus * sin(2.d0 * PHI_k) &
                + current_ephem%Cuc * cos(2.d0 * PHI_k) ! Argument of Latitude Correction
-    delta_rk = current_ephem%Crs * sin(2 * PHI_k) &
-               + current_ephem%Crc * cos(2 * PHI_k) ! Radius Correction
-    delta_ik = current_ephem%Cis * sin(2 * PHI_k) &
-               + current_ephem%Cic * cos(2 * PHI_k) ! Inclination Correction
+    delta_rk = current_ephem%Crs * sin(2.d0 * PHI_k) &
+               + current_ephem%Crc * cos(2.d0 * PHI_k) ! Radius Correction
+    delta_ik = current_ephem%Cis * sin(2.d0 * PHI_k) &
+               + current_ephem%Cic * cos(2.d0 * PHI_k) ! Inclination Correction
 
     ! 補正係数を適用する
     uk = PHI_k + delta_uk ! Corrected Argument of Latitude
@@ -72,7 +72,7 @@ contains
     yk_prime = rk * sin(uk)
 
     ! Corrected longitude of ascending node
-    OMEGA_k = current_ephem%LOMEGA0 + ( current_ephem%OMEGA_DOT - OMEGAe_DOT ) * tk &
+    OMEGA_k = current_ephem%LOMEGA0 + ( current_ephem%OMEGA_DOT - OMEGAe_DOT ) * tk0 &
               - OMEGAe_DOT * current_ephem%TOE
 
     ! Earth-fixed coordinates
