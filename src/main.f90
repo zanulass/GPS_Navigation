@@ -17,6 +17,16 @@ program main
 !   3. 使用モジュール
 !     main(本ルーチン)
 !       +
+!       +----mod_variable (共通の定数と変数を宣言)
+!       +
+!       +----time_util (衛星クロックの補正)
+!       +
+!       +----navigation_message (Navigation Message Fileの読み込み)
+!       +
+!       +----satellite_position (衛星の位置計算)
+!       +
+!       +----plint_list (エフェメリス情報と衛星位置を実行結果リストファイルに書き出し)
+!       +
 !       +----compute_solutionモジュール (最小二乗法により方程式を解く)
 ! 　
 ! 　4 引数詳細
