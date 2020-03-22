@@ -122,7 +122,7 @@ program main
     write(6, '("LOOP ",I0, 5X,"x = ",f12.3,5X,"y = ",f12.3,5X,"z = ", f12.3, 5X,"s = ", D12.3)') &
       loop, sol(1), sol(2), sol(3), sol(4)
   end do
-  close(20) ! 実行結果リストクローズaaaaaa
+  close(20) ! 実行結果リストクローズ
 
   ! ! 正しい解
   x = -3947846.647d0
