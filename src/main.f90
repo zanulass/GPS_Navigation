@@ -41,7 +41,7 @@ program main
       INTEGER                 :: PRN_list(SATS)              ! 使用する衛星のリスト
       DOUBLE PRECISION        :: SATS_RANGE(SATS)            ! 各衛星の位置とrangeの配列
       DOUBLE PRECISION        :: r                           ! range
-      DOUBLE PRECISION        :: G(SATS, MAX_UNKNOWNS)   ! 観測行列(観測衛星数の上限 ×　未知数の上限)
+      DOUBLE PRECISION        :: G(SATS, MAX_UNKNOWNS)       ! 観測行列(観測衛星数の上限 ×　未知数の上限)
       DOUBLE PRECISION        :: dr(SATS)                    ! rangeの修正量
       DOUBLE PRECISION        :: dx(SATS)                    ! 解の更新量
       DOUBLE PRECISION        :: sol(MAX_UNKNOWNS)           ! 方程式の解:受信機位置x,y,z座標, 受信機クロック誤差 s
@@ -52,7 +52,7 @@ program main
       TYPE(ephemeris_info)    :: current_ephem               ! 作業用のエフェメリス情報
       DOUBLE PRECISION        :: sat_clock                   ! 衛星のクロック補正量
 
-      DOUBLE PRECISION        :: x, y, z, s                    ! 解の確認用出力
+      DOUBLE PRECISION        :: x, y, z, s                  ! 解の確認用(正しい解)
 !   +-----------------------------------------------------------------------------------------------------------------
 
 
