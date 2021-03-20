@@ -128,7 +128,7 @@ contains
     GTG_inv = GTG
     call inverse_matrix(GTG_inv, m)
 
-    ! GTG_invとGの行列積
+    ! GTG_invとGTの行列積
     GTG_invGT = matmul(GTG_inv, GT)
 
     ! dx = GTG_invGTdr
