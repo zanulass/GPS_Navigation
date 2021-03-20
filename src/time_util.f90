@@ -39,7 +39,7 @@ contains
 
     call julianday(Y, M, D, hh, mm, ss, MJD_now)
 
-    delta_sec = (MJD_now - MJD_GPS_ZERO) * 86400.d0 ! 単位は秒
+    delta_sec = (MJD_now - MJD_GPS_ZERO_EPOCH) * 86400.d0 ! 単位は秒
     wt%week = idint(delta_sec / WEEK_SEC)
     wt%sec = dmod(delta_sec, WEEK_SEC)
   end subroutine date_to_wtime

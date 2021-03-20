@@ -9,8 +9,8 @@ module mod_variable
 
   ! 時刻の定数
   DOUBLE PRECISION, PARAMETER :: WEEK_SEC = 7.d0 * 24.d0 * 60.d0 * 60.d0
-  INTEGER, PARAMETER :: GPS_ZERO(6) =(/ 1980, 1, 6, 0, 0, 0 /)
-  DOUBLE PRECISION, PARAMETER ::  MJD_GPS_ZERO = 44244.00000d0
+  INTEGER, PARAMETER :: GPS_ZERO_EPOCH(6) =(/ 1980, 1, 6, 0, 0, 0 /)
+  DOUBLE PRECISION, PARAMETER ::  MJD_GPS_ZERO_EPOCH = 44244.00000d0
 
   ! 時刻を表す構造体
   type :: wtime
@@ -18,6 +18,7 @@ module mod_variable
     DOUBLE PRECISION :: sec  ! 週初めからの経過時間
   end type wtime
 
+  ! 扱える行列の大きさ
   INTEGER, PARAMETER :: MAX_SATS = 16 ! 観測衛星数の上限
   INTEGER, PARAMETER :: MAX_UNKNOWNS = 4 ! 未知数の上限
   INTEGER, PARAMETER :: MAX_PRN = 32 ! 衛星番号の上限
