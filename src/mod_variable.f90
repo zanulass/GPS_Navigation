@@ -29,6 +29,8 @@ module mod_variable
   DOUBLE PRECISION :: ion_alpha(4)
   DOUBLE PRECISION :: ion_beta(4)
   INTEGER          :: leap_sec
+
+  ! エフェメリス情報を格納する構造体
   type :: ephemeris_info
   !----------- 1行目 ------------------------
     INTEGER           :: PRN = 0
