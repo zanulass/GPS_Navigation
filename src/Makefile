@@ -19,6 +19,10 @@ ${TARGET} : ${OBJECTS}
 main.o : ${MOD_FILE}
 
 
-.PHONY: clean
+.PHONY: clean run
+
 clean:
 	rm -f ${OBJECTS} ${MOD_FILE}
+
+run:
+	../bin/GPSCALPOS
