@@ -65,7 +65,7 @@ contains
     ! 衛星時計の補正量を計算
     dt = current_ephem%AF0 &
        + current_ephem%AF1 * tk &
-       + current_ephem%AF2 * (tk**2)
+       + current_ephem%AF2 * tk * tk
 
     sat_clock = dt + tr - current_ephem%TGD
 
