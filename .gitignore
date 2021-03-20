@@ -1,5 +1,5 @@
 # modファイルはいらない
-*.mod
+src/*.mod
 # 実行ファイルはいらない
 *.out
 *.o
@@ -10,7 +10,6 @@
 ref_code/
 
 test
-
 
 tmp/
 
