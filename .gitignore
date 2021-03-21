@@ -11,8 +11,6 @@ ref_code/
 
 test
 
-tmp/
-
 .vscode
 
 bin/
