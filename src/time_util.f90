@@ -1,6 +1,18 @@
 module time_util
-  use mod_variable
   implicit none
+
+  ! 時刻の定数
+  DOUBLE PRECISION, PARAMETER :: WEEK_SEC = 7.d0 * 24.d0 * 60.d0 * 60.d0
+  DOUBLE PRECISION, PARAMETER :: DAY_SEC = 24.d0 * 60.d0 * 60.d0
+  INTEGER, PARAMETER :: GPS_ZERO_EPOCH(6) =(/ 1980, 1, 6, 0, 0, 0 /)
+  DOUBLE PRECISION, PARAMETER ::  MJD_GPS_ZERO_EPOCH = 44244.00000d0
+
+  ! 時刻を表す構造体
+  type :: wtime
+    INTEGER          :: week ! 週番号
+    DOUBLE PRECISION :: sec  ! 週初めからの経過時間
+  end type wtime
+
 contains
   subroutine julianday(Y, M, D, hh, mm, ss, MJD_now)
     ! Jurian Dayを計算
@@ -45,5 +57,5 @@ contains
   end subroutine date_to_wtime
 
 ! ======================================================================================
-  
+
 end module time_util

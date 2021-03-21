@@ -1,26 +1,58 @@
 module navigation_message
-  use mod_variable
   use time_util
+  use exec_conditions
   implicit none
-contains
-  subroutine read_nav_msg(nav_msg_file)
-    ! GPS NAVIGATION MESSAGE FILE からパラメータを読み込む
 
-    ! 引数詳細
-    CHARACTER(256), INTENT(IN)   :: nav_msg_file         ! RINEX NAVIGATION MESSAGE FILEのパス
+  ! 電離層遅延補正情報
+  INTEGER, PARAMETER :: IONO_PARAMETERS = 4
+  DOUBLE PRECISION :: ion_alpha(IONO_PARAMETERS)
+  DOUBLE PRECISION :: ion_beta(IONO_PARAMETERS)
+
+  ! うるう秒の情報
+  INTEGER          :: leap_sec = 0
+
+  ! エフェメリス情報を格納する構造体
+  type :: ephemeris_info
+  !----------- 1行目 ------------------------
+    INTEGER           :: PRN = 0
+    DOUBLE PRECISION  :: TOC = 0.d0, AF0 = 0.d0, AF1 = 0.d0, AF2 = 0.d0
+  !----------- 2行目 -------------------------
+    DOUBLE PRECISION  :: IODE = 0.d0, Crs = 0.d0, delta_n = 0.d0, M0 = 0.d0
+  !----------- 3行目 -------------------------
+    DOUBLE PRECISION  :: Cuc = 0.d0, e = 0.d0, Cus = 0.d0, sqrtA = 0.d0
+  !----------- 4行目 -------------------------
+    DOUBLE PRECISION  :: TOE = 0.d0, Cic = 0.d0, LOMEGA0 = 0.d0, Cis =0.d0
+  !----------- 5行目 -------------------------
+    DOUBLE PRECISION  :: i0 = 0.d0, Crc = 0.d0, somega = 0.d0, OMEGA_DOT =0.d0
+  !----------- 6行目 -------------------------
+    DOUBLE PRECISION  :: IDOT = 0.d0, CAonL2 = 0.d0, WEEK = 0.d0, L2P = 0.d0
+  !----------- 7行目 -------------------------
+    DOUBLE PRECISION  :: acc = 0.d0, health = 0.d0, TGD = 0.d0, IODC = 0.d0
+  !----------- 8行目 -------------------------
+    DOUBLE PRECISION  :: TOT = 0.d0, Fit = 0.d0
+  end type ephemeris_info
+
+  TYPE(ephemeris_info) :: ephem_buf(MAX_PRN, MAX_EPHMS) ! 全エフェメリス格納配列
+  TYPE(ephemeris_info) :: ephem_data ! 1衛星分のエフェメリス
+  TYPE(ephemeris_info) :: current_ephem(MAX_PRN) ! 測位計算に使用するエフェメリス格納配列
+  INTEGER              :: ephem_count(MAX_PRN) = 0
+
+contains
+  subroutine read_nav_msg()
+    implicit none
 
     ! 使用局所領域
-    INTEGER        :: ios ! ファイル読み込みステータス
-    INTEGER :: year, month, day, hour, minute ! TOC計算用
+    INTEGER          :: ios ! ファイル読み込みステータス
+    INTEGER          :: year, month, day, hour, minute ! TOC計算用
     DOUBLE PRECISION :: second ! TOC計算用
     INTEGER          :: i, j ! ループ用カウンタ
     DOUBLE PRECISION :: t ! (TOCの週番号 - GPSweek) + TOT [sec]
-    type(wtime) :: wt
-    INTEGER   :: info_week
+    type(wtime)      :: wt_toc
+    INTEGER          :: info_week
 
 
-    open(10, file=nav_msg_file, action='read', status='old') ! Navigation Message Fileオープン
-
+    ! Navigation Message Fileオープン
+    open(10, file=nav_msg_file, iostat=ios,action='read', status='old')
     write(*, *) 'Reading RINEX Nav...'
 
     ! ヘッダ部 ---------------------------------------
@@ -45,11 +77,11 @@ contains
 
       if (ios < 0) exit ! ファイル最終行に来たら読み込み終了
 
-      wt%week = 0 ! 週番号を初期化
-      wt%sec = 0.d0 ! 経過秒を初期化
-      call date_to_wtime(year, month, day, hour, minute, second, wt) ! TOCを計算する
-      ephem_data%TOC = wt%sec
-      info_week = wt%week
+      wt_toc%week = 0 ! 週番号を初期化
+      wt_toc%sec = 0.d0 ! 経過秒を初期化
+      call date_to_wtime(year, month, day, hour, minute, second, wt_toc) ! TOCを計算する
+      ephem_data%TOC = wt_toc%sec
+      info_week = wt_toc%week
 
 
       ! ----------- 2行目 読み込み ----------------------------------
@@ -82,7 +114,7 @@ contains
 
       ! 同じPRNのエフェメリスは送信時刻の早いものを残す-------------------------
       do  i = 1, ephem_count(ephem_data%PRN)
-        if (ephem_buf(ephem_data%PRN, i)%WEEK /= wt%week) cycle ! 週番号が異なるものは飛ばす
+        if (ephem_buf(ephem_data%PRN, i)%WEEK /= wt_toc%week) cycle ! 週番号が異なるものは飛ばす
         if (ephem_buf(ephem_data%PRN, i)%WEEK == ephem_data%IODC) then !IODCが一致
           if (ephem_data%TOT < ephem_buf(ephem_data%PRN, i)%TOT) then ! 送信時刻が早いものを残す
             ephem_buf(ephem_data%PRN, i) = ephem_data
@@ -119,18 +151,21 @@ contains
 
 ! ============================================================================================
 
-  subroutine set_ephemeris(PRN, wt, iode, current_ephem)
+  subroutine set_ephemeris(PRN, wt, iode, return_code)
+    implicit none
     ! 使用するエフェメリスをセットする
     ! 引数詳細
-    INTEGER, INTENT(IN) :: PRN
-    TYPE(wtime), INTENT(IN) :: wt
-    INTEGER, INTENT(IN) :: iode
-    TYPE(ephemeris_info), INTENT(INOUT) :: current_ephem
+    INTEGER, INTENT(IN)                 :: PRN
+    TYPE(wtime), INTENT(IN)             :: wt
+    INTEGER, INTENT(IN)                 :: iode
+    INTEGER, INTENT(INOUT)              :: return_code
 
     ! 使用局所領域
     DOUBLE PRECISION :: t0, t
-    INTEGER :: i! カウンタ
+    INTEGER          :: i  ! カウンタ
 
+    ! リターンコードを初期化
+    return_code = 0
     ! 新しいエフェメリスから探す
     do i = ephem_count(PRN), 1, -1
       ! j = i
@@ -152,8 +187,11 @@ contains
       if (t < wt%sec + 0.1d0 ) exit
 
     end do
-
-    current_ephem = ephem_buf(PRN, i)
+    if (i >= 0) then
+      current_ephem(PRN) = ephem_buf(PRN, i)
+    else
+      return_code = 9
+    end if
   end subroutine set_ephemeris
 
 

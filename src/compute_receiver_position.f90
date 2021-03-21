@@ -1,0 +1,221 @@
+module compute_receiver_position
+  use WGS84_constants
+  use exec_conditions
+  use time_util
+  use print_util
+  use navigation_message
+  use correction_parameters
+  use compute_solution
+  implicit none
+contains
+  subroutine main_calc_position(wt, pseudo_range, sol)
+    implicit none
+    ! 引数詳細
+    TYPE(wtime), INTENT(INOUT)       :: wt
+    DOUBLE PRECISION, INTENT(INOUT)  :: pseudo_range(MAX_PRN)
+    DOUBLE PRECISION, INTENT(INOUT)  :: sol(MAX_UNKNOWNS)
+
+    ! 使用局所領域
+    INTEGER            :: return_code
+    INTEGER            :: prn
+    INTEGER            :: loop ! ループカウンタ
+    DOUBLE PRECISION   :: clock_err  ! クロック誤差(秒に変換)
+
+
+    ! エフェメリスをセット
+    do prn=1, MAX_PRN
+      if (pseudo_range(prn) > 0.d0) then
+        ! rangeが設定された衛星に対して，エフェメリス情報をセット
+        call set_ephemeris(prn, wt, -1, return_code)
+        ! セットしたエフェメリス情報を実行結果リストに出力
+        call print_ephemeris_info(prn)
+
+
+        ! 有効期限内のエフェメリス情報がなければ無効な衛星として擬似距離に0を設定
+        if (return_code == 9) then
+          pseudo_range(prn) = 0.d0
+        ! healthフラグをチェックし，無効な衛星は擬似距離に0を設定
+        else if (current_ephem(prn)%health /= 0.d0) then
+          pseudo_range(prn) = 0.d0
+        end if
+      end if
+    end do
+
+    ! 解を初期化
+    sol(:) = 0.d0
+
+    ! 測位計算開始
+    do loop=1, MAX_LOOP
+      call calc_position(wt, pseudo_range, sol, loop, return_code)
+      if (return_code /= 0) exit
+
+      ! クロック誤差
+      clock_err = sol(4) / C
+
+      ! 途中経過を出力
+      write(6, '(A,I0, 5X, A, f12.3,5X, A ,f12.3,5X, A, f12.3, 5X, A, D12.3)') &
+      "LOOP = ", loop, "x = ", sol(1), "y = ", sol(2), "z = ", sol(3), "s = ", clock_err
+
+    end do
+
+  end subroutine main_calc_position
+
+  subroutine calc_position(wt, pseudo_range, sol, loop, return_code)
+    implicit none
+    ! 引数詳細
+    TYPE(wtime), INTENT(INOUT)       :: wt
+    DOUBLE PRECISION, INTENT(INOUT)  :: pseudo_range(MAX_PRN)
+    DOUBLE PRECISION, INTENT(INOUT)  :: sol(MAX_UNKNOWNS)
+    INTEGER, INTENT(IN)              :: loop  ! csv書き出し用にループ番号を取得
+    INTEGER, INTENT(INOUT)           :: return_code
+
+
+    ! 使用局所領域
+    DOUBLE PRECISION  :: delta_pseudo_range(MAX_PRN)  ! 擬似距離の残差
+    DOUBLE PRECISION  :: iono_correction  ! 電離層遅延補正値
+    DOUBLE PRECISION  :: delta_pseudo_range_iono(MAX_PRN)  ! 擬似距離の残差(電離層遅延成分)
+    DOUBLE PRECISION  :: tropo_correction  ! 対流圏遅延補正値
+    DOUBLE PRECISION  :: delta_pseudo_range_tropo(MAX_PRN)  ! 擬似距離の残差(対流圏遅延成分)
+    INTEGER           :: prn
+    DOUBLE PRECISION  :: range_correct_clock  ! クロック補正値計算用のrange
+    DOUBLE PRECISION  :: range_calc_sat_pos  ! 衛星位置計算用のrange
+    DOUBLE PRECISION  :: range_obs_matrix  ! 観測行列に使用するrange
+    DOUBLE PRECISION  :: sat_position(3)  ! ECEF座標系における衛星位置ベクトル
+    DOUBLE PRECISION  :: receiver_position(3)  ! ECEF座標系における受信機位置ベクトル
+    DOUBLE PRECISION  :: sat_clock  ! クロック補正値
+    DOUBLE PRECISION  :: obs_mat(MAX_SATS, MAX_UNKNOWNS)  ! 観測行列(観測衛星数の上限 ×　未知数の上限)
+    DOUBLE PRECISION  :: delta_range(MAX_SATS)  ! rangeの修正量
+    DOUBLE PRECISION  :: delta_x(MAX_UNKNOWNS)  ! 解の更新量
+    INTEGER           :: rtn = 0 ! 最小二乗法サブルーチンのリターンコード
+    INTEGER           :: i
+    INTEGER           :: u ! デバッグ用
+
+    ! リターンコードを初期化
+    return_code = 0
+
+    ! 使用済み衛星数を初期化
+    num_used_PRN = 0
+    ! 測位計算に使用する衛星のPRNを格納するリストを初期化
+    used_PRN_list(:) = 0
+
+    ! 受信時刻(受信機クロック分を補正する)
+    wt%sec = wt%sec - sol(4) / C
+
+    ! 暫定の受信機位置
+    receiver_position(1:3) = sol(1:3)
+
+    ! 実行結果リストオープン
+    open (20,  file=list_file, action='write', status='old', position='append')
+    write(20, '(A,I1,A)') "##### Satellite Position and O-C (LOOP=", loop, ") #####"
+    write(20, *) ""
+
+    !  観測行列を初期化
+    obs_mat(:, :) = 0.d0
+
+    do prn=1, MAX_PRN
+      ! 残差を初期化
+      delta_pseudo_range(prn) = 0.d0
+      delta_pseudo_range_iono = 0.d0
+      delta_pseudo_range_tropo = 0.d0
+      ! 擬似距離が有効な衛星のみを使用する(擬似距離が0のPRNは飛ばす)
+      if (pseudo_range(prn) == 0.d0) cycle
+
+      ! *** 有効な衛星のPRNを記録 ***
+      num_used_PRN = num_used_PRN + 1
+      used_PRN_list(num_used_PRN) = prn
+
+      ! *** クロック補正値を計算 ***
+      ! クロック補正値計算用のrangeを設定
+      range_correct_clock = pseudo_range(prn) - sol(4)
+      sat_clock = 0.d0
+      call correct_sat_clock(prn, wt, range_correct_clock, sat_clock)
+      ! *** 衛星位置を計算 ***
+      ! 衛星位置計算用のrangeを設定
+      range_calc_sat_pos = range_correct_clock + (sat_clock * C)
+      sat_position(:) = 0.d0
+      call calc_sat_position(prn, wt, range_calc_sat_pos, sat_position)
+
+      ! *** 観測行列(observastion matrix)の作成 ***
+      range_obs_matrix = sqrt( sum( (sat_position(1:3) - sol(1:3)) ** 2.d0 ) )
+      obs_mat(num_used_PRN, 1:3) = ( sol(1:3) - sat_position(1:3) ) / range_obs_matrix
+      obs_mat(num_used_PRN, 4) = 1.d0
+
+      ! *** 擬似距離の修正量を計算 ***
+      delta_range(num_used_PRN) = pseudo_range(prn) + (sat_clock * C) &
+                                    - (range_obs_matrix + sol(4) )
+
+      ! *** 電離層補正補正 ***
+      if (iono_flag .eqv. .true.) then
+        iono_correction = 0.d0
+        call calc_iono_correction(sat_position, receiver_position, wt, iono_correction)
+        delta_pseudo_range_iono(prn) = delta_pseudo_range_iono(prn) + iono_correction
+
+        ! 擬似距離の修正量に電離層遅延補正量を加える
+        delta_range(num_used_PRN) = delta_range(num_used_PRN) + delta_pseudo_range_iono(prn)
+      end if
+
+      ! *** 対流圏遅延補正 ***
+      if (tropo_flag .eqv. .true.) then
+        tropo_correction = 0.d0
+        call calc_tropo_correction(sat_position, receiver_position, tropo_correction)
+        delta_pseudo_range_tropo = delta_pseudo_range_tropo + tropo_correction
+
+        ! 擬似距離の修正量に対流圏遅延補正量を加える
+        delta_range(num_used_PRN) = delta_range(num_used_PRN) + delta_pseudo_range_tropo(prn)
+      end if
+
+      ! *** 擬似距離の残差を設定 ***
+      delta_pseudo_range(prn) = delta_range(num_used_PRN)
+
+      ! 実行結果リスト出力
+      write(20, '(A,1X,I2)') 'PRN:', prn
+      ! 衛星位置
+      write(20, '(3X,A29,2X,A9,1X,D19.12,2X,A9,1X,D19.12,2X,A9,1X,D19.12)') &
+      'Satellite Positon', 'x:', sat_position(1), 'y:', sat_position(2), 'z:', sat_position(3)
+      ! 残差
+      write(20, '(A,1X,D19.12)') "O-C :", delta_range(1)
+      do i = 2, MAX_SATS
+        write(20, '(5X, D19.12)') delta_range(i)
+      end do
+      write(20, *) ""
+
+      ! 観測データ補正値記録用csvに書き出すデータを記録
+      sat_clock_for_print(prn, loop) = sat_clock
+      iono_correction_for_print(prn, loop) = iono_correction
+      tropo_correction_for_print(prn, loop) = tropo_correction
+
+    end do
+
+    ! 実行結果リストクローズ
+    close(20)
+
+    ! 未知数(x, y, z, s)に対して有効な衛星数が足りなければエラー
+    if (num_used_PRN < MAX_UNKNOWNS) then
+      return_code = 9
+      goto 8000
+    end if
+
+    ! 方程式を解く
+    call least_squares(obs_mat, delta_range, delta_x, num_used_PRN, 4, rtn)
+    if (rtn /= 0) then
+      return_code = 9
+      goto 9000
+    end if
+
+    ! 解の更新
+    sol(1:4) = sol(1:4) + delta_x(1:4)
+
+    return
+
+    ! *** エラー処理 ***
+    8000 continue
+    write(*, *) "使用できる衛星数が未知数の数より少ない"
+    return
+
+    9000 continue
+    write(*, *) "最小二乗法の計算に失敗"
+    return
+
+  end subroutine calc_position
+
+end module compute_receiver_position

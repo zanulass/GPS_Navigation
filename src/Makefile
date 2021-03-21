@@ -4,8 +4,37 @@ FC = gfortran
 FFLAGS = -g -Wall -fbounds-check -Wuninitialized -ffpe-trap=invalid,zero,overflow
 
 TARGET = ../bin/GPSCALPOS
-OBJECTS = main.o mod_variable.o time_util.o nav_msg.o  satellite_position.o print_list.o compute_solution.o
-MOD_FILE = mod_variable.mod time_util.mod nav_msg.mod  satellite_position.mod print_list.mod compute_solution.mod
+
+OBJECTS = main.o \
+	WGS84_constants.o \
+	exec_conditions.o \
+	compute_solution.o \
+	time_util.o \
+	coordinate_util.o \
+  navigation_message.o \
+	print_util.o \
+	satellite_position.o \
+	correction_parameters.o \
+	compute_receiver_position.o
+
+
+
+
+
+MOD_FILE = WGS84_constants.mod \
+	exec_conditions.mod \
+	compute_solution.mod \
+	time_util.mod \
+	coordinate_util.mod \
+	navigation_message.mod \
+	print_util.mod \
+	satellite_position.mod \
+	correction_parameters.mod \
+	compute_receiver_position.mod
+
+
+
+
 
 %.o: %.f90
 	$(COMPILE.f) $(OUTPUT_OPTION) $<

@@ -1,60 +1,28 @@
 program main
-  use mod_variable
+  use exec_conditions
   use time_util
-  use navigation_message
-  use satellite_position
-  use print_list
-  use compute_solution
+  use print_util
+  use compute_receiver_position
   implicit none
 
-!   1. 機能概要
-!     GPS位置計算メインルーチン
-!     RINEX形式の航法データと観測データを用いて、受信機の位置を計算する
-
-!   2. 注意事項
-!     特になし
-!
-!   3. 使用モジュール
-!     main(本ルーチン)
-!       +
-!       +----mod_variable (共通の定数と変数を宣言)
-!       +
-!       +----time_util (衛星クロックの補正)
-!       +
-!       +----navigation_message (Navigation Message Fileの読み込み)
-!       +
-!       +----satellite_position (衛星の位置計算)
-!       +
-!       +----plint_list (エフェメリス情報と衛星位置を実行結果リストファイルに書き出し)
-!       +
-!       +----compute_solutionモジュール (最小二乗法により方程式を解く)
-! 　
-! 　4 引数詳細
-!     なし
-
-!   5. 使用局所領域
+!   使用局所領域
 !   +------------------------------------------------------------------------------------------------------------
 !   ! TYPE(LENGTH)            !  name(size)
 !   +------------------------------------------------------------------------------------------------------------
       INTEGER, PARAMETER      :: SATS = 5                    ! 使用する衛星数
-      INTEGER, PARAMETER      :: MAX_LOOP = 8                ! 解を求める際に用いる最大ループ回数
       INTEGER                 :: PRN_list(SATS)              ! 使用する衛星のリスト
-      DOUBLE PRECISION        :: SATS_RANGE(SATS)            ! 各衛星の位置とrangeの配列
-      DOUBLE PRECISION        :: r                           ! range
-      DOUBLE PRECISION        :: G(SATS, MAX_UNKNOWNS)       ! 観測行列(観測衛星数の上限 ×　未知数の上限)
-      DOUBLE PRECISION        :: dr(SATS)                    ! rangeの修正量
-      DOUBLE PRECISION        :: dx(MAX_UNKNOWNS)                    ! 解の更新量
-      DOUBLE PRECISION        :: sol(MAX_UNKNOWNS)           ! 方程式の解:受信機位置x,y,z座標, 受信機クロック誤差 s
-      INTEGER                 :: i, n, loop, u               ! ループ用カウンタ
-      CHARACTER(256)          :: nav_msg_file                ! RINEX NAVIGATION MESSAGE FILEのパス
-      CHARACTER(256)          :: list_file                   ! 実行結果リストのパス
-      TYPE(wtime)             :: wt                          ! 時刻
-      TYPE(ephemeris_info)    :: current_ephem               ! 作業用のエフェメリス情報
-      DOUBLE PRECISION        :: sat_clock                   ! 衛星のクロック補正量
+      DOUBLE PRECISION        :: sats_range(SATS)            ! 各衛星の位置とrangeの配列
+      DOUBLE PRECISION        :: pseudo_range(MAX_PRN)
+      DOUBLE PRECISION        :: sol(MAX_UNKNOWNS)  ! 方程式の解(位置ベクトル(x, y, z)とクロック誤差)
 
-      DOUBLE PRECISION        :: x, y, z, s                  ! 解の確認用(正しい解)
+      INTEGER                 :: i          ! ループ用カウンタ
+
+      TYPE(wtime)             :: wt                          ! 時刻
+
+      DOUBLE PRECISION         :: x, y, z, s                  ! 解の確認用(正しい解)
 !   +-----------------------------------------------------------------------------------------------------------------
 
+  ! 試験用実行条件
 
   ! 使用するPRN
   PRN_list(:) = (/ 5,14,16,22,25 /)
@@ -68,71 +36,44 @@ program main
     22169926.127d0  & ! PRN 25
    /)
 
-  nav_msg_file = "../data/mtka3180.05n" ! Navigatione Message Fileのパス
-  list_file = "../tmp/list" ! 実行結果リストファイルのパス
 
   ! 時刻を指定
   wt%week = 1349     ! 05/11/13〜19の週
   wt%sec = 86400.d0  ! 月曜日の00:00:00
 
 
+  ! 実行結果リスト作成，ヘッダ書き込み
+  call make_list_file()
 
-  open (20,  file=list_file, action='write', status='replace') ! 実行結果リストオープン
+  ! Navigation Message File読み込み
+  call read_nav_msg()
 
-  call read_nav_msg(nav_msg_file) ! Navigation Message File読み込み
-  call print_nav_file_header() ! Navigation Message ヘッダ部をリストに書き出し
+  ! Navigation Message ヘッダ部をリストに書き出し
+  call print_nav_file_header()
 
-  sol(:) = 0.d0  ! 解を初期化
-  G(:, :) = 0.d0 ! 観測行列を初期化
-  ! 解を求めるループ
-  do loop=1, MAX_LOOP
-    n = SATS  ! 衛星の数をセットする
-    do i=1, n ! 衛星の数だけループする
-      call set_ephemeris(PRN_list(i), wt, -1, current_ephem) ! 作業中の衛星のエフェメリスをセット
+  ! 擬似距離を初期化
+  pseudo_range(:) = 0.d0
 
-      sat_clock = 0.d0 ! 衛星のクロック補正量を初期化
-      call correct_sat_clock(wt, current_ephem, sat_clock) ! Navigation Message ヘッダ部からクロック補正量sat_clockを計算
-
-      current_ephem%pos_xyz(:) = 0.d0 ! 衛星位置を初期化
-      call calc_satpos(wt, current_ephem) ! 衛星の位置を計算　ECEFにおける衛星座標がpos_xyzにセットされる
-
-      if (loop == 8) then
-        call print_ephemeris_info(current_ephem) ! 最後に一度、各衛星のエフェメリスをリストに書き出し
-      end if
-
-      r = sqrt( sum( (current_ephem%pos_xyz(1:3) - sol(1:3) ) ** 2.d0 ) ) ! 疑似距離rの計算
-      G(i,1:3) = ( sol(1:3) - current_ephem%pos_xyz(1:3) ) / r ! 観測行列Gを作成
-      G(i, 4) = 1.d0
-
-      dr(i) = SATS_RANGE(i) + sat_clock*C - (r + sol(4)) !擬似距離の修正量drを計算
-    end do
-    ! 観測行列のデバッグライト
-      ! write(*, *) '========================================='
-      ! do u = 1, n
-      !   write(*, *) G(u, 1:4)
-      ! end do
-
-    call least_squares(G, dr, dx, n, 4); ! 最小二乗法により方程式を解く
-
-    ! 位置ベクトルの解を更新
-    do i=1, 3
-      sol(i) = sol(i) + dx(i) ! 解を更新
-    end do
-    ! クロック補正値の解を更新
-    sol(4) = (sol(4) + dx(4)) / C 
-
-
-    ! 途中経過を出力
-    write(6, '("LOOP ",I0, 5X,"x = ",f12.3,5X,"y = ",f12.3,5X,"z = ", f12.3, 5X,"s = ", D12.3)') &
-      loop, sol(1), sol(2), sol(3), sol(4)
+  ! 擬似距離をセット
+  do i=1, SATS
+    pseudo_range(PRN_list(i)) = sats_range(i)
   end do
-  close(20) ! 実行結果リストクローズ
 
-  ! ! 正しい解
-  x = -3947846.647
-  y = 3364338.022d0
-  z = 3699406.626d0
-  s = -5.3233d-008
+  ! 測位計算実行
+  sol(:) = 0.d0
+  call main_calc_position(wt, pseudo_range, sol)
+
+  ! 観測データ補正値記録用csvファイル書き出し
+  call print_correction_data()
+
+  ! 計算結果を実行結果リストに出力
+  call print_result_list(sol)
+
+  ! 正しい解
+  x = -3947762.486d0
+  y = 3364401.302d0
+  z = 3699431.992d0
+  s = -3.9032d-008
   write(6, *) "******************** 正しい計算結果 ******************************"
   write(6, '("x = ",f12.3,5X,"y = ",f12.3,5X,"z = ",f12.3, 5X,"s = ",d12.4)') x, y, z, s
 
