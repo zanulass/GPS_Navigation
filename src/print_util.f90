@@ -132,7 +132,7 @@ contains
     ! 使用局所領域
     CHARACTER(1024)  :: csv_file_path_list(num_used_PRN)
     CHARACTER(1024)  :: file_path
-    CHARACTER(256)    :: char_PRN
+    CHARACTER(32)    :: char_PRN
     INTEGER         :: prn
     INTEGER         :: unit_num
     INTEGER         :: i, j
@@ -142,9 +142,7 @@ contains
     do i=1, num_used_PRN
       file_path = ""
       write(char_PRN, *) used_PRN_list(i)
-      tmp_dir = trim(tmp_dir)
-      char_PRN = trim(char_PRN)
-      file_path = tmp_dir // "correction_param_" // char_PRN // ".csv"
+      file_path = trim(tmp_dir) // "correction_param_" // trim(char_PRN) // ".csv"
       call StripSpaces(file_path)
       csv_file_path_list(i) = file_path
     end do
@@ -173,9 +171,9 @@ contains
     open (20,  file=list_file, action='write', status='old', position='append')
 
     write(20, *) "##### Output File Path#####"
-    write(20, *) "Correction_OBS_Parameter file : ", csv_file_path_list(1)
+    write(20, *) "Correction_OBS_Parameter file : ", trim(csv_file_path_list(1))
     do i = 2, num_used_PRN
-      write(20, '(32X, A)') csv_file_path_list(i)
+      write(20, '(32X, A)') trim(csv_file_path_list(i))
     end do
 
     ! 実行結果リストクローズ
@@ -193,11 +191,11 @@ contains
 
     write(20,*) "##### Result List ##### "
     write(20,*) "Used Satellite Num : ", num_used_PRN
-    write(20,*) "Used Stellite's PRN : ", used_PRN_list
+    write(20,*) "Used Stellite's PRN : ", used_PRN_list(1:num_used_PRN)
     write(20,*) " ### Calculated Receiver Position ###"
     write(20, '(A, f12.3,5X, A ,f12.3,5X, A, f12.3)') &
       "x = ", sol(1), "y = ", sol(2), "z = ", sol(3)
-    write(20, *) "Clock Error", sol(4)/ C
+    write(20, *) "Clock Error = ", sol(4)/ C
 
     ! 実行結果リストクローズ
     close(20)

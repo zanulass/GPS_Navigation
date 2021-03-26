@@ -25,11 +25,10 @@ contains
     ! エフェメリスをセット
     do prn=1, MAX_PRN
       if (pseudo_range(prn) > 0.d0) then
-        ! rangeが設定された衛星に対して，エフェメリス情報をセット
+        ! 観測量が設定された衛星に対して，エフェメリス情報をセット
         call set_ephemeris(prn, wt, -1, return_code)
         ! セットしたエフェメリス情報を実行結果リストに出力
         call print_ephemeris_info(prn)
-
 
         ! 有効期限内のエフェメリス情報がなければ無効な衛星として擬似距離に0を設定
         if (return_code == 9) then
@@ -46,10 +45,11 @@ contains
 
     ! 測位計算開始
     do loop=1, MAX_LOOP
+      ! 受信機位置計算
       call calc_position(wt, pseudo_range, sol, loop, return_code)
       if (return_code /= 0) exit
 
-      ! クロック誤差
+      ! 受信機クロック誤差
       clock_err = sol(4) / C
 
       ! 途中経過を出力
@@ -79,9 +79,9 @@ contains
     INTEGER           :: prn
     DOUBLE PRECISION  :: range_correct_clock  ! クロック補正値計算用のrange
     DOUBLE PRECISION  :: range_calc_sat_pos  ! 衛星位置計算用のrange
-    DOUBLE PRECISION  :: range_obs_matrix  ! 観測行列に使用するrange
-    DOUBLE PRECISION  :: sat_position(3)  ! ECEF座標系における衛星位置ベクトル
-    DOUBLE PRECISION  :: receiver_position(3)  ! ECEF座標系における受信機位置ベクトル
+    DOUBLE PRECISION  :: euclidian_distance  ! 観測行列に使用するrange
+    DOUBLE PRECISION  :: sat_pos(3)  ! ECEF座標系における衛星位置ベクトル
+    DOUBLE PRECISION  :: receiver_pos(3)  ! ECEF座標系における受信機位置ベクトル
     DOUBLE PRECISION  :: sat_clock  ! クロック補正値
     DOUBLE PRECISION  :: obs_mat(MAX_SATS, MAX_UNKNOWNS)  ! 観測行列(観測衛星数の上限 ×　未知数の上限)
     DOUBLE PRECISION  :: delta_range(MAX_SATS)  ! rangeの修正量
@@ -102,7 +102,7 @@ contains
     wt%sec = wt%sec - sol(4) / C
 
     ! 暫定の受信機位置
-    receiver_position(1:3) = sol(1:3)
+    receiver_pos(1:3) = sol(1:3)
 
     ! 実行結果リストオープン
     open (20,  file=list_file, action='write', status='old', position='append')
@@ -115,8 +115,8 @@ contains
     do prn=1, MAX_PRN
       ! 残差を初期化
       delta_pseudo_range(prn) = 0.d0
-      delta_pseudo_range_iono = 0.d0
-      delta_pseudo_range_tropo = 0.d0
+      delta_pseudo_range_iono(prn) = 0.d0
+      delta_pseudo_range_tropo(prn) = 0.d0
       ! 擬似距離が有効な衛星のみを使用する(擬似距離が0のPRNは飛ばす)
       if (pseudo_range(prn) == 0.d0) cycle
 
@@ -124,30 +124,31 @@ contains
       num_used_PRN = num_used_PRN + 1
       used_PRN_list(num_used_PRN) = prn
 
-      ! *** クロック補正値を計算 ***
-      ! クロック補正値計算用のrangeを設定
+      ! *** 衛星クロック補正値を計算 ***
+      ! 衛星クロック補正値計算用のrangeを設定
       range_correct_clock = pseudo_range(prn) - sol(4)
       sat_clock = 0.d0
       call correct_sat_clock(prn, wt, range_correct_clock, sat_clock)
+
       ! *** 衛星位置を計算 ***
       ! 衛星位置計算用のrangeを設定
       range_calc_sat_pos = range_correct_clock + (sat_clock * C)
-      sat_position(:) = 0.d0
-      call calc_sat_position(prn, wt, range_calc_sat_pos, sat_position)
+      sat_pos(:) = 0.d0
+      call calc_sat_position(prn, wt, range_calc_sat_pos, sat_pos)
 
       ! *** 観測行列(observastion matrix)の作成 ***
-      range_obs_matrix = sqrt( sum( (sat_position(1:3) - sol(1:3)) ** 2.d0 ) )
-      obs_mat(num_used_PRN, 1:3) = ( sol(1:3) - sat_position(1:3) ) / range_obs_matrix
+      euclidian_distance = sqrt( sum( (sat_pos(1:3) - receiver_pos(1:3)) ** 2.d0 ) )
+      obs_mat(num_used_PRN, 1:3) = ( sol(1:3) - sat_pos(1:3) ) / euclidian_distance
       obs_mat(num_used_PRN, 4) = 1.d0
 
       ! *** 擬似距離の修正量を計算 ***
       delta_range(num_used_PRN) = pseudo_range(prn) + (sat_clock * C) &
-                                    - (range_obs_matrix + sol(4) )
+                                    - (euclidian_distance + sol(4) )
 
       ! *** 電離層補正補正 ***
       if (iono_flag .eqv. .true.) then
         iono_correction = 0.d0
-        call calc_iono_correction(sat_position, receiver_position, wt, iono_correction)
+        call calc_iono_correction(sat_pos, receiver_pos, wt, iono_correction)
         delta_pseudo_range_iono(prn) = delta_pseudo_range_iono(prn) + iono_correction
 
         ! 擬似距離の修正量に電離層遅延補正量を加える
@@ -157,8 +158,8 @@ contains
       ! *** 対流圏遅延補正 ***
       if (tropo_flag .eqv. .true.) then
         tropo_correction = 0.d0
-        call calc_tropo_correction(sat_position, receiver_position, tropo_correction)
-        delta_pseudo_range_tropo = delta_pseudo_range_tropo + tropo_correction
+        call calc_tropo_correction(sat_pos, receiver_pos, tropo_correction)
+        delta_pseudo_range_tropo(prn) = delta_pseudo_range_tropo(prn) + tropo_correction
 
         ! 擬似距離の修正量に対流圏遅延補正量を加える
         delta_range(num_used_PRN) = delta_range(num_used_PRN) + delta_pseudo_range_tropo(prn)
@@ -171,12 +172,9 @@ contains
       write(20, '(A,1X,I2)') 'PRN:', prn
       ! 衛星位置
       write(20, '(3X,A29,2X,A9,1X,D19.12,2X,A9,1X,D19.12,2X,A9,1X,D19.12)') &
-      'Satellite Positon', 'x:', sat_position(1), 'y:', sat_position(2), 'z:', sat_position(3)
+      'Satellite Positon:', 'x =', sat_pos(1), 'y =', sat_pos(2), 'z =', sat_pos(3)
       ! 残差
-      write(20, '(A,1X,D19.12)') "O-C :", delta_range(1)
-      do i = 2, MAX_SATS
-        write(20, '(5X, D19.12)') delta_range(i)
-      end do
+      write(20, '(3X,A29,1X,D19.12)') "O-C :", delta_range(num_used_PRN)
       write(20, *) ""
 
       ! 観測データ補正値記録用csvに書き出すデータを記録

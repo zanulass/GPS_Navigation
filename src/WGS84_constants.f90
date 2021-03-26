@@ -7,5 +7,5 @@ module WGS84_constants
   DOUBLE PRECISION, PARAMETER :: MU = 3.986005d14 ! gravitational constant[m^3/s^2]
   DOUBLE PRECISION, PARAMETER :: OMEGAe_DOT = 7.2921151467d-5 ! earth's rotation rate [rad/s]
   DOUBLE PRECISION, PARAMETER :: Re = 6378137.d0  ! 地球半径[m]
-  DOUBLE PRECISION, PARAMETER :: Fe = 1.d0/298.257223563d0 ! 地球の扁平率
+  DOUBLE PRECISION, PARAMETER :: Fe = 1.d0 / 298.257223563d0 ! 地球の扁平率
 end module WGS84_constants

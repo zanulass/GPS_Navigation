@@ -92,28 +92,30 @@ contains
     DOUBLE PRECISION :: e ! eccentricity
     DOUBLE PRECISION :: n ! mean motion
     DOUBLE PRECISION :: Mk ! mean anomaly
-    DOUBLE PRECISION :: E0, E1  ! Eccentric anomalyのテンポラリ
-    DOUBLE PRECISION :: fE_equation ! ケプラー方程式
-    DOUBLE PRECISION :: fE_prime ! fEの微分
+    ! DOUBLE PRECISION :: E0, E1  ! Eccentric anomalyのテンポラリ
+    ! DOUBLE PRECISION :: fE_equation ! ケプラー方程式
+    ! DOUBLE PRECISION :: fE_prime ! fEの微分
     INTEGER          :: i  ! ループカウンタ
 
     ! 離心近点角Ek[rad]を求める
-    A = current_ephem(prn)%sqrtA ** 2 ! Semi-major axis
+    A = current_ephem(prn)%sqrtA ** 2.d0 ! Semi-major axis
     e = current_ephem(prn)%e ! eccentricity
-    n = sqrt(MU / A**3) ! Computed mean motion [rad/sec]
+    n = sqrt(MU / A**3.d0) ! Computed mean motion [rad/sec]
     n = n + current_ephem(prn)%delta_n ! Corrected mean motion
     Mk = current_ephem(prn)%M0 + n * tk ! Mean Anomaly
 
     ! Solve Kepler equation by Newton-Raphson Method
-    E0 = Mk
+    !E0 = Mk
+    Ek = Mk
     do i = 1, 10
-      fE_equation = E0 - e * sin(E0) - Mk ! 離心近点角Eを変数とする関数f(E)
-      fE_prime = 1.d0 - e * cos(E0) ! f(E)の導関数
-      E1 = E0 - (fE / fE_prime) ! 反復計算
-      if (abs(E1 - E0) < 1d-6) exit ! 許容誤差以内ならexit
-      E0 = E1 ! 解の更新
+      Ek = Mk + e * sin(Ek)
+      ! fE_equation = E0 - e * sin(E0) - Mk ! 離心近点角Eを変数とする関数f(E)
+      ! fE_prime = 1.d0 - e * cos(E0) ! f(E)の導関数
+      ! E1 = E0 - (fE / fE_prime) ! 反復計算
+      ! if (abs(E1 - E0) < 1d-6) exit ! 許容誤差以内ならexit
+      ! E0 = E1 ! 解の更新
     end do
-    Ek = E0 ! 最終的に得られた解(Eccentric Anomaly)
+    !Ek = E0 ! 最終的に得られた解(Eccentric Anomaly)
 
   end subroutine calc_eccentric_anomaly
 end module satellite_position

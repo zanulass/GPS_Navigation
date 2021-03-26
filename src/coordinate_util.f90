@@ -9,33 +9,36 @@ contains
     DOUBLE PRECISION, INTENT(INOUT) :: blh_pos(3)  ! 測地座標値(緯度，軽度，高度)
 
     ! 使用局所領域
+    DOUBLE PRECISION  :: f  ! 楕円体の扁平率
+    DOUBLE PRECISION  :: a  ! 楕円体の長半径
     DOUBLE PRECISION  :: b  ! 楕円体の短半径
     DOUBLE PRECISION  :: e  ! 楕円体の離心率
     DOUBLE PRECISION  :: h, p, t, n
     DOUBLE PRECISION  :: lat, lon, height
 
     ! 測地座標値の初期化
-    blh_pos(:) = 0
+    blh_pos(1:2) = 0.d0
+    blh_pos(3) = -Re
 
     ! 原点の場合
-    if (ecef_pos(1) == 0 .and. ecef_pos(2) == 0 .and. ecef_pos(3) == 0) then
+    if (ecef_pos(1) == 0.d0 .and. ecef_pos(2) == 0.d0 .and. ecef_pos(3) == 0.d0) then
       goto 8000
     end if
 
     ! 楕円体のパラメータ
-    ! Fe : 扁平率
-    ! Re : 長半径
-    b = Re * (1.d0 - Fe)  ! 短半径
-    e = sqrt(Fe * (2.d0 - Fe))  ! 離心率
+    f = Fe ! : 扁平率
+    a = Re ! : 長半径
+    b = a * (1.d0 - f)  ! 短半径
+    e = sqrt(f * (2.d0 - f))  ! 離心率
 
     ! 座標変換のためのパラメータ
-    h = Re * Re - b * b
+    h = a * a - b * b
     p = sqrt( ecef_pos(1) * ecef_pos(1) + ecef_pos(2) * ecef_pos(2) )
-    t = atan2( ecef_pos(3) * Re, p * b )
+    t = atan2( ecef_pos(3) * a, p * b )
 
     ! 測地座標系への変換
-    lat = atan2( ecef_pos(3) + h / b * sin(t)**3, p - h / Re * cos(t)**3 )
-    n = Re / sqrt( 1.d0 - e**2 * sin(lat)**2 )
+    lat = atan2( ecef_pos(3) + h / b * sin(t)**3.d0, p - h / a * cos(t)**3.d0 )
+    n = a / sqrt( 1.d0 - e**2.d0 * sin(lat)**2.d0 )
     lon = atan2( ecef_pos(2), ecef_pos(1) )
     height = ( p / cos(lat) ) - n
 
@@ -43,7 +46,11 @@ contains
     blh_pos(2) = lon
     blh_pos(3) = height
 
+    return
+
     8000 continue
+
+    return
 
   end subroutine ecef_to_blh
 

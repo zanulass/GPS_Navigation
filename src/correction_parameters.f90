@@ -37,7 +37,7 @@ contains
     sqrtA = current_ephem(prn)%sqrtA
 
     ! 相対論補正項を計算
-    tr = ( -2.d0 * sqrt(MU) / C**2 ) * e * sqrtA * sin(Ek)
+    tr = ( -2.d0 * sqrt(MU) / C**2.d0 ) * e * sqrtA * sin(Ek)
 
     ! クロックエポックからの時間差を求める
     tk0 = ( wt%week - current_ephem(prn)%WEEK ) * WEEK_SEC &
@@ -112,7 +112,7 @@ contains
 
     ! 傾斜係数
     x = 0.53d0 - el
-    f = 1.d0 + 16.d0 * x**3
+    f = 1.d0 + 16.d0 * x**3.d0
 
     ! 補正値を求める
     x = 2.d0 * PI * ( lt - MAX_DELAY_TIME ) / per
@@ -123,7 +123,7 @@ contains
       x = x + 2.d0 * PI
     end do
     if (abs(x) < 1.57d0) then
-      y = amp * ( 1.d0 - x**2 * (0.5d0 - x**2 / 24.d0) ) ! 昼間
+      y = amp * ( 1.d0 - x**2 * (0.5d0 - x**2.d0 / 24.d0) ) ! 昼間
     else
       y = 0.d0  ! 夜間
     end if

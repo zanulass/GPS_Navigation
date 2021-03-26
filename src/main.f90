@@ -12,14 +12,11 @@ program main
       INTEGER, PARAMETER      :: SATS = 5                    ! 使用する衛星数
       INTEGER                 :: PRN_list(SATS)              ! 使用する衛星のリスト
       DOUBLE PRECISION        :: sats_range(SATS)            ! 各衛星の位置とrangeの配列
-      DOUBLE PRECISION        :: pseudo_range(MAX_PRN)
-      DOUBLE PRECISION        :: sol(MAX_UNKNOWNS)  ! 方程式の解(位置ベクトル(x, y, z)とクロック誤差)
-
-      INTEGER                 :: i          ! ループ用カウンタ
-
+      DOUBLE PRECISION        :: pseudo_range(MAX_PRN)       ! 観測量
+      DOUBLE PRECISION        :: sol(MAX_UNKNOWNS)           ! 方程式の解(位置ベクトル(x, y, z)とクロック誤差)
+      INTEGER                 :: i                           ! ループ用カウンタ
       TYPE(wtime)             :: wt                          ! 時刻
-
-      DOUBLE PRECISION         :: x, y, z, s                  ! 解の確認用(正しい解)
+      DOUBLE PRECISION        :: x, y, z, s                 ! 解の確認用(正しい解)
 !   +-----------------------------------------------------------------------------------------------------------------
 
   ! 試験用実行条件
@@ -51,7 +48,7 @@ program main
   ! Navigation Message ヘッダ部をリストに書き出し
   call print_nav_file_header()
 
-  ! 擬似距離を初期化
+  ! 擬似距離(観測データ)を初期化
   pseudo_range(:) = 0.d0
 
   ! 擬似距離をセット
@@ -60,7 +57,6 @@ program main
   end do
 
   ! 測位計算実行
-  sol(:) = 0.d0
   call main_calc_position(wt, pseudo_range, sol)
 
   ! 観測データ補正値記録用csvファイル書き出し
