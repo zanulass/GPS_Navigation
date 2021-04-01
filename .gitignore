@@ -12,5 +12,5 @@ ref_code/
 test
 
 .vscode
-
+.DS_Store
 bin/

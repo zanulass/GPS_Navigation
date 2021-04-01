@@ -18,7 +18,7 @@ module exec_conditions
   ! 電離層遅延補正フラグ
   LOGICAL  :: iono_flag = .true.
   ! 対流圏遅延補正フラグ
-  LOGICAL  :: tropo_flag = .true.
+  LOGICAL  :: tropo_flag = .false.
 
   ! 測位計算に使用した衛星のPRN
   INTEGER  :: num_used_PRN

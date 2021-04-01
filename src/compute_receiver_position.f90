@@ -146,8 +146,8 @@ contains
                                     - (euclidian_distance + sol(4) )
 
       ! *** 電離層補正補正 ***
+      iono_correction = 0.d0
       if (iono_flag .eqv. .true.) then
-        iono_correction = 0.d0
         call calc_iono_correction(sat_pos, receiver_pos, wt, iono_correction)
         delta_pseudo_range_iono(prn) = delta_pseudo_range_iono(prn) + iono_correction
 
@@ -156,8 +156,8 @@ contains
       end if
 
       ! *** 対流圏遅延補正 ***
+      tropo_correction = 0.d0
       if (tropo_flag .eqv. .true.) then
-        tropo_correction = 0.d0
         call calc_tropo_correction(sat_pos, receiver_pos, tropo_correction)
         delta_pseudo_range_tropo(prn) = delta_pseudo_range_tropo(prn) + tropo_correction
 
@@ -174,7 +174,14 @@ contains
       write(20, '(3X,A29,2X,A9,1X,D19.12,2X,A9,1X,D19.12,2X,A9,1X,D19.12)') &
       'Satellite Positon:', 'x =', sat_pos(1), 'y =', sat_pos(2), 'z =', sat_pos(3)
       ! 残差
-      write(20, '(3X,A29,1X,D19.12)') "O-C :", delta_range(num_used_PRN)
+      write(20, '(3X,A29,1X,D19.12)') "O-C:", delta_range(num_used_PRN)
+      write(20, '(3X,A29)') "OBS Matrix:"
+      do u = 1, MAX_SATS
+        write(20, *) obs_mat(u, 1:4)
+      end do
+      write(20, '(3X,A29,1X,D19.12)') "SAT_CLOCK:", sat_clock
+      write(20, '(3X,A29,1X,D19.12)') "IONO_CORRECTION:", iono_correction
+      write(20, '(3X,A29,1X,D19.12)') "TROPO_CORRECTION:", tropo_correction
       write(20, *) ""
 
       ! 観測データ補正値記録用csvに書き出すデータを記録
