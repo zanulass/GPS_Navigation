@@ -160,6 +160,7 @@ contains
     call calc_elevation(sat_position, receiver_position, el)
 
     tropo_correction = -(TROPO_DELAY_ZENITH * d**5 / ( sin(el) + 0.0121d0 ) )
+    ! tropo_correction = - 1 / sin(el)
 
   end subroutine
 

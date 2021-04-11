@@ -13,4 +13,5 @@ test
 
 .vscode
 .DS_Store
-bin/
+
+bin/GPSCALPOS

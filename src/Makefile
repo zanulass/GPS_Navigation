@@ -54,5 +54,4 @@ clean:
 	rm -f ${OBJECTS} ${MOD_FILE}
 
 run:
-	rm -f ../tmp/*
-	../bin/GPSCALPOS
+	../bin/gpscalpos.sh

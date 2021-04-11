@@ -41,7 +41,11 @@ contains
     end do
 
     ! 解を初期化
-    sol(:) = 0.d0
+    ! sol(:) = 0.d0
+    sol(1) = -3947762.7496d0
+    sol(2) = 3364399.8789d0
+    sol(3) = 3699428.5111d0
+    sol(4) = 0.d0
 
     ! 測位計算開始
     do loop=1, MAX_LOOP
