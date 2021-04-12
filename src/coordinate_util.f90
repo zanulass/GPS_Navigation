@@ -74,12 +74,12 @@ contains
     s1 = sin(blh_base_pos(2))
     c1 = cos(blh_base_pos(2))
     s2 = sin(blh_base_pos(1))
-    c2 = sin(blh_base_pos(1))
+    c2 = cos(blh_base_pos(1))
 
     ! 相対位置を回転させてENU座標に変換する
-    enu_pos(1) = ecef_pos(1) * s1 * ecef_pos(2) * c1
-    enu_pos(2) = ecef_pos(1) * c1 * s2 - ecef_pos(2) * s1 * s2 + ecef_pos(3) * c2
-    enu_pos(3) = ecef_pos(3) * c1 * c2 + ecef_pos(2) * s1 * c2 + ecef_pos(3) * s2
+    enu_pos(1) = - relative_pos(1) * s1 + relative_pos(2) * c1
+    enu_pos(2) = - relative_pos(1) * c1 * s2 - relative_pos(2) * s1 * s2 + relative_pos(3) * c2
+    enu_pos(3) = relative_pos(1) * c1 * c2 + relative_pos(2) * s1 * c2 + relative_pos(3) * s2
 
   end subroutine ecef_to_enu
 
@@ -95,7 +95,7 @@ contains
 
     call ecef_to_enu(sat_position, receiver_position, enu_sat_position)
 
-    el = atan2(enu_sat_position(3), sqrt(enu_sat_position(1)**2 + enu_sat_position(2)**2) )
+    el = atan2(enu_sat_position(3), sqrt(enu_sat_position(1)**2.d0 + enu_sat_position(2)**2.d0 ) )
 
   end subroutine calc_elevation
 

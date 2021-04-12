@@ -80,9 +80,12 @@ contains
     call calc_elevation(sat_position, receiver_position, el)
     call calc_azimuth(sat_position, receiver_position, az)
 
+    el = RAD_TO_SEC * el
+    az = RAD_TO_SEC * az
+
     ! ピアースポイントを求める
     call ecef_to_blh(receiver_position, blh_receiver_position)
-    psi = 0.0137d0 / ( el + 0.11d0 ) - 0.022
+    psi = 0.0137d0 / ( el + 0.11d0 ) - 0.022d0
     phi_i = RAD_TO_SEC * ( blh_receiver_position(1) + psi * cos(az * PI) )
     if (phi_i > 0.416d0) phi_i = 0.416d0
     if (phi_i < -0.416d0) phi_i = -0.416d0
@@ -159,8 +162,10 @@ contains
     ! 仰角を求める
     call calc_elevation(sat_position, receiver_position, el)
 
-    tropo_correction = -(TROPO_DELAY_ZENITH * d**5 / ( sin(el) + 0.0121d0 ) )
-    ! tropo_correction = - 1 / sin(el)
+    write(*,*) "el =", el
+
+    tropo_correction = -(TROPO_DELAY_ZENITH * d**5.d0 / ( sin(el) + 0.0121d0 ) )
+    ! tropo_correction = - 1.d0 / sin(el)
 
   end subroutine
 
