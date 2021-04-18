@@ -33,7 +33,6 @@ program main
     22169926.127d0  & ! PRN 25
    /)
 
-
   ! 時刻を指定
   wt%week = 1349     ! 05/11/13〜19の週
   wt%sec = 86400.d0  ! 月曜日の00:00:00
@@ -59,11 +58,11 @@ program main
   ! 測位計算実行
   call main_calc_position(wt, pseudo_range, sol)
 
-  ! 観測データ補正値記録用csvファイル書き出し
-  call print_correction_data()
+  ! 計算結果csvファイル初期化
+  call print_csv_initialized()
 
-  ! 計算結果を実行結果リストに出力
-  call print_result_list(sol)
+  ! 計算csvファイル書き出し
+  call print_correction_data()
 
   ! 正しい解
   x = -3947762.486d0

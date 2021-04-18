@@ -162,8 +162,6 @@ contains
     ! 仰角を求める
     call calc_elevation(sat_position, receiver_position, el)
 
-    write(*,*) "el =", el
-
     tropo_correction = -(TROPO_DELAY_ZENITH * d**5.d0 / ( sin(el) + 0.0121d0 ) )
     ! tropo_correction = - 1.d0 / sin(el)
 

@@ -56,6 +56,10 @@ contains
       ! 受信機クロック誤差
       clock_err = sol(4) / C
 
+      ! 推定パラメータを保存
+      sol_for_print(1:3, loop) = sol(1:3)
+      sol_for_print(4, loop) = clock_err
+
       ! 途中経過を出力
       write(6, '(A,I0, 5X, A, f12.3,5X, A ,f12.3,5X, A, f12.3, 5X, A, D12.3)') &
       "LOOP = ", loop, "x = ", sol(1), "y = ", sol(2), "z = ", sol(3), "s = ", clock_err
@@ -107,11 +111,6 @@ contains
 
     ! 暫定の受信機位置
     receiver_pos(1:3) = sol(1:3)
-
-    ! 実行結果リストオープン
-    open (20,  file=list_file, action='write', status='old', position='append')
-    write(20, '(A,I1,A)') "##### Satellite Position and O-C (LOOP=", loop, ") #####"
-    write(20, *) ""
 
     !  観測行列を初期化
     obs_mat(:, :) = 0.d0
@@ -169,34 +168,20 @@ contains
         delta_range(num_used_PRN) = delta_range(num_used_PRN) + delta_pseudo_range_tropo(prn)
       end if
 
-      ! *** 擬似距離の残差を設定 ***
-      delta_pseudo_range(prn) = delta_range(num_used_PRN)
+      ! *** 出力csv用のデータを保存 ***
+      ! 擬似距離の残差を保存
+      oc_for_print(prn, loop) = delta_range(num_used_PRN)
 
-      ! 実行結果リスト出力
-      write(20, '(A,1X,I2)') 'PRN:', prn
-      ! 衛星位置
-      write(20, '(3X,A29,2X,A9,1X,D19.12,2X,A9,1X,D19.12,2X,A9,1X,D19.12)') &
-      'Satellite Positon:', 'x =', sat_pos(1), 'y =', sat_pos(2), 'z =', sat_pos(3)
-      ! 残差
-      write(20, '(3X,A29,1X,D19.12)') "O-C:", delta_range(num_used_PRN)
-      write(20, '(3X,A29)') "OBS Matrix:"
-      do u = 1, MAX_SATS
-        write(20, *) obs_mat(u, 1:4)
-      end do
-      write(20, '(3X,A29,1X,D19.12)') "SAT_CLOCK:", sat_clock
-      write(20, '(3X,A29,1X,D19.12)') "IONO_CORRECTION:", iono_correction
-      write(20, '(3X,A29,1X,D19.12)') "TROPO_CORRECTION:", tropo_correction
-      write(20, *) ""
+      ! 衛生位置を保存
+      sat_pos_for_print(1:3, prn, loop) = sat_pos
 
-      ! 観測データ補正値記録用csvに書き出すデータを記録
+      ! 補正値パラメータを保存
       sat_clock_for_print(prn, loop) = sat_clock
       iono_correction_for_print(prn, loop) = iono_correction
       tropo_correction_for_print(prn, loop) = tropo_correction
 
-    end do
 
-    ! 実行結果リストクローズ
-    close(20)
+    end do
 
     ! 未知数(x, y, z, s)に対して有効な衛星数が足りなければエラー
     if (num_used_PRN < MAX_UNKNOWNS) then
@@ -213,6 +198,11 @@ contains
 
     ! 解の更新
     sol(1:4) = sol(1:4) + delta_x(1:4)
+
+
+
+
+
 
     return
 

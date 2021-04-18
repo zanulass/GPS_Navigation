@@ -126,45 +126,99 @@ contains
 
   end subroutine print_ephemeris_info
 
-  subroutine print_correction_data()
+  subroutine print_csv_initialized()
     implicit none
 
     ! 使用局所領域
-    CHARACTER(1024)  :: csv_file_path_list(num_used_PRN)
-    CHARACTER(1024)  :: file_path
-    CHARACTER(32)    :: char_PRN
-    INTEGER         :: prn
-    INTEGER         :: unit_num
-    INTEGER         :: i, j
-
+    CHARACTER(:), ALLOCATABLE  :: file_path
+    CHARACTER(256)               :: char_PRN
+    CHARACTER(1024)            :: csv_file_path_list(num_used_PRN)
+    INTEGER                    :: i, unit_num
 
     ! 出力csvファイルパスを作成
     do i=1, num_used_PRN
-      file_path = ""
+      char_PRN = ""
       write(char_PRN, *) used_PRN_list(i)
       file_path = trim(tmp_dir) // "correction_param_" // trim(char_PRN) // ".csv"
       call StripSpaces(file_path)
       csv_file_path_list(i) = file_path
+
+      ! csvヘッダ書き込み
+      unit_num = i * 100
+      open (unit_num,  file=csv_file_path_list(i), action='write', status='replace')
+      write(unit_num, *) "PRN", "," , &
+                         "iteration_num", ",", &
+                         "receirver_pos_x", ",", &
+                         "receiver_pos_y", ",", &
+                         "receiver_pos_z", ",", &
+                         "reciver_clock_bias", ",", &
+                         "O-C", ",", &
+                         "sat_pos_x", ",", &
+                         "sat_pos_y", ",", &
+                         "sat_pos_z", ",", &
+                         "sat_clock_correction", ",", &
+                         "iono_correction", ",", &
+                         "tropo_correction", ","
+      close(unit_num)
     end do
+
+  end subroutine print_csv_initialized
+
+  subroutine print_correction_data()
+    implicit none
+
+    ! 使用局所領域
+    CHARACTER(1024) :: csv_file_path_list(num_used_PRN)
+    INTEGER         :: prn
+    INTEGER         :: unit_num
+    INTEGER         :: i, j
+    CHARACTER(1024) :: linebuf
 
     ! 観測データ補正値をPRNごとにcsvファイルに書き出し
     do i=1, num_used_PRN
       ! csvファイルオープン
-      unit_num = i * 10
-      open (unit_num,  file=csv_file_path_list(i), action='write', status='replace')
+      unit_num = i * 100
+      open (unit_num,  file=csv_file_path_list(i), action='write', status='old', position='append')
 
       ! 出力する衛星のPRNを取得
       prn = used_PRN_list(i)
+
+      ! データを出力
       do j = 1, MAX_LOOP
-        write(unit_num, *) prn, ",", sat_clock_for_print(prn, j), ",", &
+        write(linebuf, *) prn, ",", &
+                           j, ",", &
+                           sol_for_print(1, j), ",", &
+                           sol_for_print(2, j), ",", &
+                           sol_for_print(3, j), ",", &
+                           sol_for_print(4, j), ",", &
+                           oc_for_print(prn, j), ",", &
+                           sat_pos_for_print(1, prn, j), ",", &
+                           sat_pos_for_print(2, prn, j), ",", &
+                           sat_pos_for_print(3, prn, j), ",", &
+                           sat_clock_for_print(prn, j), ",", &
                            iono_correction_for_print(prn, j), ",", &
                            tropo_correction_for_print(prn, j)
+        call del_spaces(linebuf)
+        write(unit_num, '(A)') trim(linebuf)
       end do
 
       ! csvファイルクローズ
       close(unit_num)
 
     end do
+
+
+
+  end subroutine print_correction_data
+
+  subroutine print_output_file_path(csv_file_path_list)
+    implicit none
+
+    ! 引数詳細
+    CHARACTER(1024), INTENT(IN)  :: csv_file_path_list(num_used_PRN)
+
+    ! 使用局所領域
+    INTEGER :: i
 
     ! 出力csvファイルパスを実行結果リストに書き出し
     ! 実行結果リストオープン
@@ -178,29 +232,7 @@ contains
 
     ! 実行結果リストクローズ
     close(20)
-
-  end subroutine print_correction_data
-
-  subroutine print_result_list(sol)
-    implicit none
-    ! 引数詳細
-    DOUBLE PRECISION, INTENT(IN) :: sol(MAX_UNKNOWNS)
-
-    ! 実行結果リストオープン
-    open (20,  file=list_file, action='write', status='old', position='append')
-
-    write(20,*) "##### Result List ##### "
-    write(20,*) "Used Satellite Num : ", num_used_PRN
-    write(20,*) "Used Stellite's PRN : ", used_PRN_list(1:num_used_PRN)
-    write(20,*) " ### Calculated Receiver Position ###"
-    write(20, '(A, f12.3,5X, A ,f12.3,5X, A, f12.3)') &
-      "x = ", sol(1), "y = ", sol(2), "z = ", sol(3)
-    write(20, *) "Clock Error = ", sol(4)/ C
-
-    ! 実行結果リストクローズ
-    close(20)
-
-  end subroutine print_result_list
+  end subroutine print_output_file_path
 
   subroutine StripSpaces(string)
     character(len=*) :: string
@@ -224,6 +256,19 @@ contains
     end do
 
     end subroutine
+
+    subroutine del_spaces(s)
+      character (*), intent (inout) :: s
+      character (len=len(s)) tmp
+      integer i, j
+      j = 1
+      do i = 1, len(s)
+        if (s(i:i)==' ') cycle
+        tmp(j:j) = s(i:i)
+        j = j + 1
+      end do
+      s = tmp(1:j-1)
+    end subroutine del_spaces
 
 
 end module print_util

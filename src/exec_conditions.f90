@@ -24,7 +24,11 @@ module exec_conditions
   INTEGER  :: num_used_PRN
   INTEGER  :: used_PRN_list(MAX_PRN)
 
-  ! 観測データ補正値記録用csvデータ
+  ! 計算結果出力csvデータ
+  DOUBLE PRECISION  :: sol_for_print(4, MAX_LOOP)
+  DOUBLE PRECISION  :: receiver_clock_for_print(2, MAX_PRN, MAX_LOOP)
+  DOUBLE PRECISION  :: oc_for_print(MAX_PRN, MAX_LOOP)
+  DOUBLE PRECISION  :: sat_pos_for_print(1:3, MAX_PRN, MAX_LOOP)
   DOUBLE PRECISION  :: sat_clock_for_print(MAX_PRN, MAX_LOOP)
   DOUBLE PRECISION  :: iono_correction_for_print(MAX_PRN, MAX_LOOP)
   DOUBLE PRECISION  :: tropo_correction_for_print(MAX_PRN, MAX_LOOP)
