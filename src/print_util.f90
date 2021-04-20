@@ -147,6 +147,7 @@ contains
       unit_num = i * 100
       open (unit_num,  file=csv_file_path_list(i), action='write', status='replace')
       write(unit_num, *) "PRN", "," , &
+                        "reeceiver_epoch", ",", &
                          "iteration_num", ",", &
                          "receirver_pos_x", ",", &
                          "receiver_pos_y", ",", &
@@ -166,9 +167,12 @@ contains
 
   subroutine print_correction_data()
     implicit none
+    ! 引数詳細
+
 
     ! 使用局所領域
     CHARACTER(1024) :: csv_file_path_list(num_used_PRN)
+    INTEGER         :: epoch_num
     INTEGER         :: prn
     INTEGER         :: unit_num
     INTEGER         :: i, j
@@ -184,24 +188,26 @@ contains
       prn = used_PRN_list(i)
 
       ! データを出力
-      do j = 1, MAX_LOOP
-        write(linebuf, *) prn, ",", &
-                           j, ",", &
-                           sol_for_print(1, j), ",", &
-                           sol_for_print(2, j), ",", &
-                           sol_for_print(3, j), ",", &
-                           sol_for_print(4, j), ",", &
-                           oc_for_print(prn, j), ",", &
-                           sat_pos_for_print(1, prn, j), ",", &
-                           sat_pos_for_print(2, prn, j), ",", &
-                           sat_pos_for_print(3, prn, j), ",", &
-                           sat_clock_for_print(prn, j), ",", &
-                           iono_correction_for_print(prn, j), ",", &
-                           tropo_correction_for_print(prn, j)
-        call del_spaces(linebuf)
-        write(unit_num, '(A)') trim(linebuf)
+      do epoch_num = 1, MAX_EPOCH
+        do j = 1, MAX_LOOP
+          write(linebuf, *) prn, ",", &
+                            epoch_num, ",", &
+                            j, ",", &
+                            sol_for_print(1, epoch_num, j), ",", &
+                            sol_for_print(2, epoch_num, j), ",", &
+                            sol_for_print(3, epoch_num, j), ",", &
+                            sol_for_print(4, epoch_num, j), ",", &
+                            oc_for_print(epoch_num, prn, j), ",", &
+                            sat_pos_for_print(1, epoch_num, prn, j), ",", &
+                            sat_pos_for_print(2, epoch_num, prn, j), ",", &
+                            sat_pos_for_print(3, epoch_num, prn, j), ",", &
+                            sat_clock_for_print(epoch_num, prn, j), ",", &
+                            iono_correction_for_print(epoch_num, prn, j), ",", &
+                            tropo_correction_for_print(epoch_num, prn, j)
+          call del_spaces(linebuf)
+          write(unit_num, '(A)') trim(linebuf)
+        end do
       end do
-
       ! csvファイルクローズ
       close(unit_num)
 

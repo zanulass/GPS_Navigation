@@ -35,7 +35,7 @@ module navigation_message
   TYPE(ephemeris_info) :: ephem_buf(MAX_PRN, MAX_EPHMS) ! 全エフェメリス格納配列
   TYPE(ephemeris_info) :: ephem_data ! 1衛星分のエフェメリス
   TYPE(ephemeris_info) :: current_ephem(MAX_PRN) ! 測位計算に使用するエフェメリス格納配列
-  INTEGER              :: ephem_count(MAX_PRN) = 0
+  INTEGER              :: ephem_count(MAX_PRN)
 
 contains
   subroutine read_nav_msg()
@@ -49,6 +49,9 @@ contains
     DOUBLE PRECISION :: t ! (TOCの週番号 - GPSweek) + TOT [sec]
     type(wtime)      :: wt_toc
     INTEGER          :: info_week
+
+    ! ephem_count初期化
+    ephem_count(:) = 0
 
 
     ! Navigation Message Fileオープン
@@ -168,11 +171,10 @@ contains
     return_code = 0
     ! 新しいエフェメリスから探す
     do i = ephem_count(PRN), 1, -1
-      ! j = i
       t0 = ( ephem_buf(PRN, i)%WEEK - wt%week ) * WEEK_SEC ! エフェメリスの週番号と指定時刻の週番号の差 [sec]
       t = ephem_buf(PRN, i)%TOC + t0 ! t0をクロックに足す
       if (wt%sec < t - EPHEMERIS_EXPIRE * 3600.d0 - 0.1d0 .or. & ! 有効期限より小さい
-          wt%sec > t - EPHEMERIS_EXPIRE * 3600.d0 + 0.1d0) then  ! 有効期限より大きい
+          wt%sec > t + EPHEMERIS_EXPIRE * 3600.d0 + 0.1d0) then  ! 有効期限より大きい
         cycle ! 有効期限内でなければ飛ばす
       end if
 
@@ -183,10 +185,10 @@ contains
       end if
 
       ! 受信時刻が指定時刻よりも前なら採用
-      t = ephem_buf(PRN, i)%TOT + t0 ! tを送信時刻(TOT)に足す
+      t = ephem_buf(PRN, i)%TOT + t0 ! t0を送信時刻(TOT)に足す
       if (t < wt%sec + 0.1d0 ) exit
-
     end do
+
     if (i >= 0) then
       current_ephem(PRN) = ephem_buf(PRN, i)
     else

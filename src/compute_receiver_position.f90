@@ -8,9 +8,10 @@ module compute_receiver_position
   use compute_solution
   implicit none
 contains
-  subroutine main_calc_position(wt, pseudo_range, sol)
+  subroutine main_calc_position(epoch_num, wt, pseudo_range, sol)
     implicit none
     ! 引数詳細
+    INTEGER, INTENT(IN)              :: epoch_num
     TYPE(wtime), INTENT(INOUT)       :: wt
     DOUBLE PRECISION, INTENT(INOUT)  :: pseudo_range(MAX_PRN)
     DOUBLE PRECISION, INTENT(INOUT)  :: sol(MAX_UNKNOWNS)
@@ -40,25 +41,18 @@ contains
       end if
     end do
 
-    ! 解を初期化
-    sol(:) = 0.d0
-    ! sol(1) = -3947762.7496d0
-    ! sol(2) = 3364399.8789d0
-    ! sol(3) = 3699428.5111d0
-    ! sol(4) = 0.d0
-
     ! 測位計算開始
     do loop=1, MAX_LOOP
       ! 受信機位置計算
-      call calc_position(wt, pseudo_range, sol, loop, return_code)
+      call calc_position(epoch_num, wt, pseudo_range, sol, loop, return_code)
       if (return_code /= 0) exit
 
       ! 受信機クロック誤差
       clock_err = sol(4) / C
 
       ! 推定パラメータを保存
-      sol_for_print(1:3, loop) = sol(1:3)
-      sol_for_print(4, loop) = clock_err
+      sol_for_print(1:3, epoch_num, loop) = sol(1:3)
+      sol_for_print(4, epoch_num, loop) = clock_err
 
       ! 途中経過を出力
       write(6, '(A,I0, 5X, A, f12.3,5X, A ,f12.3,5X, A, f12.3, 5X, A, D12.3)') &
@@ -68,9 +62,10 @@ contains
 
   end subroutine main_calc_position
 
-  subroutine calc_position(wt, pseudo_range, sol, loop, return_code)
+  subroutine calc_position(epoch_num, wt, pseudo_range, sol, loop, return_code)
     implicit none
     ! 引数詳細
+    INTEGER, INTENT(IN)              :: epoch_num
     TYPE(wtime), INTENT(INOUT)       :: wt
     DOUBLE PRECISION, INTENT(INOUT)  :: pseudo_range(MAX_PRN)
     DOUBLE PRECISION, INTENT(INOUT)  :: sol(MAX_UNKNOWNS)
@@ -91,8 +86,8 @@ contains
     DOUBLE PRECISION  :: sat_pos(3)  ! ECEF座標系における衛星位置ベクトル
     DOUBLE PRECISION  :: receiver_pos(3)  ! ECEF座標系における受信機位置ベクトル
     DOUBLE PRECISION  :: sat_clock  ! クロック補正値
-    DOUBLE PRECISION  :: obs_mat(MAX_SATS, MAX_UNKNOWNS)  ! 観測行列(観測衛星数の上限 ×　未知数の上限)
-    DOUBLE PRECISION  :: delta_range(MAX_SATS)  ! rangeの修正量
+    DOUBLE PRECISION  :: obs_mat(MAX_PRN, MAX_UNKNOWNS) ! 観測行列(観測衛星数の上限 ×　未知数の上限)
+    DOUBLE PRECISION  :: delta_range(MAX_PRN)  ! rangeの修正量
     DOUBLE PRECISION  :: delta_x(MAX_UNKNOWNS)  ! 解の更新量
     INTEGER           :: rtn = 0 ! 最小二乗法サブルーチンのリターンコード
     INTEGER           :: i
@@ -114,6 +109,8 @@ contains
 
     !  観測行列を初期化
     obs_mat(:, :) = 0.d0
+    ! rangeの修正料を初期化
+    delta_range(:) = 0.d0
 
     do prn=1, MAX_PRN
       ! 残差を初期化
@@ -141,11 +138,11 @@ contains
 
       ! *** 観測行列(observastion matrix)の作成 ***
       euclidian_distance = sqrt( sum( (sat_pos(1:3) - receiver_pos(1:3)) ** 2.d0 ) )
-      obs_mat(num_used_PRN, 1:3) = ( sol(1:3) - sat_pos(1:3) ) / euclidian_distance
-      obs_mat(num_used_PRN, 4) = 1.d0
+      obs_mat(prn, 1:3) = ( sol(1:3) - sat_pos(1:3) ) / euclidian_distance
+      obs_mat(prn, 4) = 1.d0
 
       ! *** 擬似距離の修正量を計算 ***
-      delta_range(num_used_PRN) = pseudo_range(prn) + (sat_clock * C) &
+      delta_range(prn) = pseudo_range(prn) + (sat_clock * C) &
                                     - (euclidian_distance + sol(4) )
 
       ! *** 電離層補正補正 ***
@@ -155,7 +152,7 @@ contains
         delta_pseudo_range_iono(prn) = delta_pseudo_range_iono(prn) + iono_correction
 
         ! 擬似距離の修正量に電離層遅延補正量を加える
-        delta_range(num_used_PRN) = delta_range(num_used_PRN) + delta_pseudo_range_iono(prn)
+        delta_range(prn) = delta_range(prn) + delta_pseudo_range_iono(prn)
       end if
 
       ! *** 対流圏遅延補正 ***
@@ -165,20 +162,20 @@ contains
         delta_pseudo_range_tropo(prn) = delta_pseudo_range_tropo(prn) + tropo_correction
 
         ! 擬似距離の修正量に対流圏遅延補正量を加える
-        delta_range(num_used_PRN) = delta_range(num_used_PRN) + delta_pseudo_range_tropo(prn)
+        delta_range(prn) = delta_range(prn) + delta_pseudo_range_tropo(prn)
       end if
 
       ! *** 出力csv用のデータを保存 ***
       ! 擬似距離の残差を保存
-      oc_for_print(prn, loop) = delta_range(num_used_PRN)
+      oc_for_print(epoch_num, prn, loop) = delta_range(prn)
 
       ! 衛生位置を保存
-      sat_pos_for_print(1:3, prn, loop) = sat_pos
+      sat_pos_for_print(1:3, epoch_num, prn, loop) = sat_pos
 
       ! 補正値パラメータを保存
-      sat_clock_for_print(prn, loop) = sat_clock
-      iono_correction_for_print(prn, loop) = iono_correction
-      tropo_correction_for_print(prn, loop) = tropo_correction
+      sat_clock_for_print(epoch_num, prn, loop) = sat_clock
+      iono_correction_for_print(epoch_num, prn, loop) = iono_correction
+      tropo_correction_for_print(epoch_num, prn, loop) = tropo_correction
 
 
     end do
@@ -190,7 +187,7 @@ contains
     end if
 
     ! 方程式を解く
-    call least_squares(obs_mat, delta_range, delta_x, num_used_PRN, 4, rtn)
+    call least_squares(obs_mat, delta_range, delta_x, MAX_PRN, MAX_UNKNOWNS, rtn)
     if (rtn /= 0) then
       return_code = 9
       goto 9000
@@ -198,11 +195,6 @@ contains
 
     ! 解の更新
     sol(1:4) = sol(1:4) + delta_x(1:4)
-
-
-
-
-
 
     return
 

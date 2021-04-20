@@ -2,6 +2,7 @@ module exec_conditions
   ! 扱える行列の大きさ
   INTEGER, PARAMETER :: MAX_SATS = 5 ! 観測衛星数の上限
   INTEGER, PARAMETER :: MAX_UNKNOWNS = 4 ! 未知数の上限
+  INTEGER, PARAMETER :: MAX_EPOCH = 2 ! エポック数の上限
   INTEGER, PARAMETER :: MAX_PRN = 32 ! 衛星番号の上限
   INTEGER, PARAMETER :: MAX_EPHMS = 100 ! 記録するエフェメリスの上限
   DOUBLE PRECISION, PARAMETER :: EPHEMERIS_EXPIRE = 2.d0 ! エフェメリスの有効期限 [h]
@@ -25,13 +26,13 @@ module exec_conditions
   INTEGER  :: used_PRN_list(MAX_PRN)
 
   ! 計算結果出力csvデータ
-  DOUBLE PRECISION  :: sol_for_print(4, MAX_LOOP)
-  DOUBLE PRECISION  :: receiver_clock_for_print(2, MAX_PRN, MAX_LOOP)
-  DOUBLE PRECISION  :: oc_for_print(MAX_PRN, MAX_LOOP)
-  DOUBLE PRECISION  :: sat_pos_for_print(1:3, MAX_PRN, MAX_LOOP)
-  DOUBLE PRECISION  :: sat_clock_for_print(MAX_PRN, MAX_LOOP)
-  DOUBLE PRECISION  :: iono_correction_for_print(MAX_PRN, MAX_LOOP)
-  DOUBLE PRECISION  :: tropo_correction_for_print(MAX_PRN, MAX_LOOP)
+  CHARACTER(23)     :: receiver_epoch_for_print(MAX_EPOCH)
+  DOUBLE PRECISION  :: sol_for_print(4, MAX_EPOCH, MAX_LOOP)
+  DOUBLE PRECISION  :: oc_for_print(MAX_EPOCH, MAX_PRN, MAX_LOOP)
+  DOUBLE PRECISION  :: sat_pos_for_print(1:3, MAX_EPOCH, MAX_PRN, MAX_LOOP)
+  DOUBLE PRECISION  :: sat_clock_for_print(MAX_EPOCH, MAX_PRN, MAX_LOOP)
+  DOUBLE PRECISION  :: iono_correction_for_print(MAX_EPOCH, MAX_PRN, MAX_LOOP)
+  DOUBLE PRECISION  :: tropo_correction_for_print(MAX_EPOCH, MAX_PRN, MAX_LOOP)
 
 
 end module exec_conditions
